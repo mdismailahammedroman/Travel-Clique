@@ -1,0 +1,21 @@
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TravelType {
+  SOLO
+  FAMILY
+  FRIENDS
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SubscriptionType {
+  MONTHLY
+  YEARLY
+}

@@ -6,7 +6,11 @@ import cors from "cors"
 const app: Application = express();
 
 import dotenv from "dotenv";
+import { golobalErrorHandler } from "./app/middleware/golobalErrorHandler";
+import router from "./router";
 dotenv.config();
+
+
 
 
 
@@ -24,11 +28,11 @@ app.use(
 app.get("/", (_req, res) => {
   res.send("✅ Doctor Appointment API is running!");
 });
-
-//  routers
-// app.use("/api/v1", );
+//   routers
+app.use("/api/v1", router);
 
 //golobal error handler
-// app.use(golobalErrorHandler)
+app.use(golobalErrorHandler)
+ 
 
 export default app;

@@ -1,26 +1,23 @@
-// src/app.ts
 import express, { Application } from "express";
 import { envVars } from "./app/config/envVars";
 import cookieParser from "cookie-parser";
-import cors from "cors"
-const app: Application = express();
-
+import cors from "cors";
 import dotenv from "dotenv";
+import router from "./app/router";
 import { golobalErrorHandler } from "./app/middleware/golobalErrorHandler";
-import router from "./router";
+import { bodyTrimmer } from "./app/middleware/bodyTrimmer";
+
 dotenv.config();
 
+const app: Application = express();
 
-
-
-
-
-// 🧩 Middleware
 app.use(express.json());
-app.use(cookieParser())
+app.use(express.urlencoded({ extended: true }));
+app.use(bodyTrimmer);
+app.use(cookieParser());
 app.use(
   cors({
-    origin: envVars.FONT_END_URL || "*", 
+    origin: envVars.FONT_END_URL || "*",
     credentials: true,
   })
 );
@@ -28,11 +25,11 @@ app.use(
 app.get("/", (_req, res) => {
   res.send("✅ Doctor Appointment API is running!");
 });
-//   routers
+
+// routes
 app.use("/api/v1", router);
 
-//golobal error handler
-app.use(golobalErrorHandler)
- 
+// global error handler
+app.use(golobalErrorHandler);
 
 export default app;

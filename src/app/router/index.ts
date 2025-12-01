@@ -1,5 +1,5 @@
 import express from "express"
-import { userRouter } from "../app/module/user/user.router";
+import { userRouter } from "../module/user/user.router"
 
 const router=express.Router()
 const RouterModule=[
@@ -9,5 +9,7 @@ const RouterModule=[
         route:userRouter,
     }
 ]
+
+RouterModule.forEach((routers )=> {router.use(routers.path,routers.route)})
 
 export default router;

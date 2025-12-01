@@ -4,6 +4,7 @@ import { Server } from "node:http";
 import dotenv from "dotenv";
 import { envVars } from "./app/config/envVars";
 import app from "./app";
+import seedSuperAdmin from "./app/utils/seedSuperAdmin";
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ async function startServer() {
 // Run the server
 (async () => {
   await startServer();
+  await seedSuperAdmin();
 })();
 
 /* ---------------------------------------------------

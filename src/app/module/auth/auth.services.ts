@@ -10,22 +10,26 @@ import { generateOtp } from "../../otp/otp.service";
 
 // LOGIN
 const loginUser = async (payload: { email: string; password: string }) => {
-  const user = await prisma.user.findFirstOrThrow({
+  // 1️⃣ Find user by email
+  const user = await prisma.user.findUniqueOrThrow({
     where: { email: payload.email },
   });
 
+  // 2️⃣ Check if verified
   if (!user.isVerified) {
     throw new AppError(status.FORBIDDEN, "Account is not verified");
   }
 
+  // 3️⃣ Check password
   const isCorrectPassword = await bcrypt.compare(payload.password, user.password);
   if (!isCorrectPassword) {
-    throw new AppError(status.UNAUTHORIZED, "Password is incorrect");
+    throw new AppError(status.UNAUTHORIZED, "Password is incorrect!");
   }
 
-  const accessToken = generateToken(payload, envVars.JWT_SECRET, envVars.JWT_EXPIRES_IN);
-const refreshToken = generateToken(payload, envVars.JWT_REFRESH_SECRET, envVars.JWT_REFRESH_EXPIRES_IN);
-
+  // 4️⃣ Generate JWT (include only id and role)
+  const tokenPayload = { id: user.id, role: user.role };
+  const accessToken = generateToken(tokenPayload, envVars.JWT_SECRET, envVars.JWT_EXPIRES_IN);
+  const refreshToken = generateToken(tokenPayload, envVars.JWT_REFRESH_SECRET, envVars.JWT_REFRESH_EXPIRES_IN);
 
   return {
     accessToken,

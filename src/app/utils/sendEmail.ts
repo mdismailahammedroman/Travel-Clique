@@ -12,6 +12,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+
 interface SendEmailOptions {
   to: string;
   subject: string;
@@ -32,3 +33,9 @@ export const sendEmail = async ({ to, subject, html }: SendEmailOptions) => {
     throw new AppError(500, "Email sending failed");
   }
 };
+
+
+
+
+
+     

@@ -4,21 +4,11 @@ import AppError from "../errorHelpers/AppError";
 import { redisClient } from "../config/redis.config";
 import { sendEmail } from "../utils/sendEmail";
 
+const OTP_EXPIRATION = 2 * 60; // 2 minutes
 
-
-
-
-
-const OTP_EXPIRATION = 2 * 60 // 2minute
-
-const generateOtp = (length = 6) => {
-    //6 digit otp
-    const otp = crypto.randomInt(10 ** (length - 1), 10 ** length).toString()
-
-    // 10 ** 5 => 10 * 10 *10 *10 *10 * 10 => 1000000
-
-    return otp
-}
+export const generateOtp = (length = 6) => {
+  return crypto.randomInt(10 ** (length - 1), 10 ** length).toString();
+};
 
 const sendOTP = async (email: string) => {
   const user = await prisma.user.findUnique({ where: { email } });
@@ -29,7 +19,6 @@ const sendOTP = async (email: string) => {
   const otp = generateOtp();
   const redisKey = `otp:${email}`;
 
-  // Store OTP in Redis for 2 minutes
   await redisClient.set(redisKey, otp, { EX: OTP_EXPIRATION });
 
   const html = `
@@ -41,16 +30,12 @@ const sendOTP = async (email: string) => {
 
   await sendEmail({
     to: email,
-    subject: "Your OTP Code",
+    subject: "Your OTP Verification Code",
     html,
   });
 };
 
-
-const verifyOTP = async (email: string, otp: string): Promise<boolean> => {
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) throw new AppError(404, "User not found");
-
+const verifyOTP = async (email: string, otp: string) => {
   const redisKey = `otp:${email}`;
   const savedOtp = await redisClient.get(redisKey);
 
@@ -58,21 +43,12 @@ const verifyOTP = async (email: string, otp: string): Promise<boolean> => {
     throw new AppError(401, "Invalid or expired OTP");
   }
 
-  // Update user as verified
   await prisma.user.update({
     where: { email },
-    data: {
-      isVerified: true,// adjust according to your enum
-    },
+    data: { isVerified: true },
   });
 
   await redisClient.del(redisKey);
-  return true;
 };
 
-
-
-export const OTPService = {
-    sendOTP,
-    verifyOTP
-}
+export const OTPService = { sendOTP, verifyOTP };

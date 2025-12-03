@@ -12,6 +12,21 @@ interface superAdminConfig {
   SUPER_ADMIN_PASSWORD: string;
   SUPER_ADMIN_PROFILE_IMAGE: string;
 }
+
+interface SmtpConfig {
+  SMTP_HOST: string;
+  SMTP_PORT: string;
+  SMPT_USER: string;
+  SMTP_PASSWORD: string;
+  SMTP_FROM_EMAIL: string;
+}
+
+interface RedisConfig {
+  REDIS_HOST: string;
+  REDIS_PORT: string;
+  REDIS_USERNAME: string;
+  REDIS_PASSWORD: string;
+}
 interface EnvConfig {
   NODE_ENV: string;
   PORT: number;
@@ -22,6 +37,8 @@ interface EnvConfig {
   SALT_ROUNDS?: string;
   CLOUDINARY: cloudinaryConfig;
   SUPER_ADMIN?: superAdminConfig;
+  SMTP_CONFIG: SmtpConfig;
+  REDIS: RedisConfig;
 }
 
 const loadEnvVariables = (): EnvConfig => {
@@ -39,6 +56,15 @@ const loadEnvVariables = (): EnvConfig => {
     "SUPER_ADMIN_EMAIL",
     "SUPER_ADMIN_PASSWORD",
     "SUPER_ADMIN_PROFILE_IMAGE",
+    "SMTP_HOST",
+    "SMTP_PORT",
+    "SMPT_USER",
+    "SMTP_PASSWORD",
+    "SMTP_FROM_EMAIL",
+    "REDIS_HOST",
+    "REDIS_PORT",
+    "REDIS_USERNAME",
+    "REDIS_PASSWORD",
   ];
 
   requiredEnvVariables.forEach((key) => {
@@ -59,12 +85,26 @@ const loadEnvVariables = (): EnvConfig => {
       CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME as string,
       CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY as string,
       CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET as string,
-    }, 
-    SUPER_ADMIN:{
-        SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL as string,
-         SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD as string,
-         SUPER_ADMIN_PROFILE_IMAGE: process.env.SUPER_ADMIN_PROFILE_IMAGE as string,
-         }
+    },
+    SUPER_ADMIN: {
+      SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL as string,
+      SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD as string,
+      SUPER_ADMIN_PROFILE_IMAGE: process.env
+        .SUPER_ADMIN_PROFILE_IMAGE as string,
+    },
+    SMTP_CONFIG: {
+      SMTP_HOST: process.env.SMTP_HOST as string,
+      SMTP_PORT: process.env.SMTP_PORT as string,
+      SMPT_USER: process.env.SMPT_USER as string,
+      SMTP_PASSWORD: process.env.SMTP_PASSWORD as string,
+      SMTP_FROM_EMAIL: process.env.SMTP_FROM_EMAIL as string,
+    },
+    REDIS: {
+      REDIS_HOST: process.env.REDIS_HOST as string,
+      REDIS_PORT: process.env.REDIS_PORT as string,
+      REDIS_USERNAME: process.env.REDIS_USERNAME as string,
+      REDIS_PASSWORD: process.env.REDIS_PASSWORD as string,
+    },
   };
 };
 

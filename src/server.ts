@@ -5,6 +5,7 @@ import { Server } from "node:http";
 import { envVars } from "./app/config/envVars";
 import app from "./app";
 import seedSuperAdmin from "./app/utils/seedSuperAdmin";
+import { connectRedish } from "./app/config/redis.config";
 
 let server: Server;
 const PORT = envVars.PORT;
@@ -20,7 +21,8 @@ async function startServer() {
 }
 
 (async () => {
-  await seedSuperAdmin(); // Ensure super admin exists first
+  await seedSuperAdmin();
+   await connectRedish() // Ensure super admin exists first
   await startServer();
 })();
 

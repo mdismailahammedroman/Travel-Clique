@@ -47,6 +47,11 @@ model User {
   password        String
   name            String
   role            Role          @default(USER)
+
+  isVerified      Boolean       @default(false)
+  verificationOtp String?
+  otpExpiresAt    DateTime?
+
   profile         Profile?
   travelPlans     TravelPlan[]
   groupsCreated   TravelGroup[] @relation("GroupCreator")
@@ -60,6 +65,7 @@ model User {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 }
+
 
 // -----------------------------------------------------
 // PROFILE (User Public Profile)

@@ -22,6 +22,29 @@ const createTravelPlan = catchAsync(async(req:Request, res:Response, )=>{
   });
 });
 
+
+const getPublicPlans=catchAsync(async(req:Request, res:Response)=>{
+  const result=await travelPlanService.getPublicPlans()
+  sendResponse(res, {
+       statusCode: httpStatus.OK,
+      success: true,
+      message: "Public travel plans retrieved",
+      data: result,
+  })
+})
+const getPlanById=catchAsync(async(req:Request, res:Response)=>{
+  const result = await travelPlanService.getPlanById(req.params.id);
+
+    sendResponse(res, {
+      statusCode: httpStatus.OK,
+      success: true,
+      message: "Travel plan retrieved successfully",
+      data: result,
+    });
+  })
 export const TravelPlanController={
-  createTravelPlan
+  createTravelPlan,
+  getPublicPlans,
+  getPlanById,
+
 }

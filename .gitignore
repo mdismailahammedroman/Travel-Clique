@@ -7,3 +7,6 @@ coverage/
 npm-debug.log
 
 /generated/prisma
+
+/generated/prisma
+text.text

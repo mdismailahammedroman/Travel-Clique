@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */
 
 class AppError extends Error{
     StatusCode:number;
-    constructor(message:string, statusCode:number, stack=""){
+    constructor(statusCode:number, message:string, stack=""){
         super(message);
         this.StatusCode=statusCode,
         this.stack=stack|| this.stack;

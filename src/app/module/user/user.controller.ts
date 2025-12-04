@@ -3,6 +3,7 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import STATUS_CODES from "http-status";
 import { userService } from "./user.service";
+import pick from "../../helpers/pick";
 
 // CREATE USER
 const createUser = catchAsync(async (req: Request, res: Response) => {
@@ -18,15 +19,21 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
 });
 
 // GET ALL USERS (ADMIN)
-const getUsers = catchAsync(async (_req: Request, res: Response) => {
-  const users = await userService.getUsers();
+const getUsers = catchAsync(async (req: Request, res: Response) => {
+  const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
+  const filters = pick(req.query, ["startDateTime", "endDateTime"]);
+
+  const users = await userService.getUsers(options, filters);
+
   sendResponse(res, {
     success: true,
     statusCode: STATUS_CODES.OK,
     message: "Users fetched successfully",
-    data: users,
+    data: users.data,
+    meta:users.meta
   });
 });
+
 
 // GET SINGLE USER
 const getUser = catchAsync(async (req: Request, res: Response) => {

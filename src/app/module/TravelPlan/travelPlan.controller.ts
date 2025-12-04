@@ -4,6 +4,7 @@ import { sendResponse } from "../../utils/sendResponse";
 import { travelPlanService } from "./travelPlan.service";
 import {  Request, Response } from "express";
 import AppError from "../../errorHelpers/AppError";
+import pick from "../../helpers/pick";
 
 const createTravelPlan = catchAsync(async(req:Request, res:Response, )=>{
  const userId = req.user?.id;
@@ -24,7 +25,9 @@ const createTravelPlan = catchAsync(async(req:Request, res:Response, )=>{
 
 
 const getPublicPlans=catchAsync(async(req:Request, res:Response)=>{
-  const result=await travelPlanService.getPublicPlans()
+  const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
+  const filters = pick(req.query, ["startDateTime", "endDateTime"]);
+  const result=await travelPlanService.getPublicPlans(options,filters)
   sendResponse(res, {
        statusCode: httpStatus.OK,
       success: true,
@@ -32,6 +35,8 @@ const getPublicPlans=catchAsync(async(req:Request, res:Response)=>{
       data: result,
   })
 })
+
+
 const getPlanById=catchAsync(async(req:Request, res:Response)=>{
   const result = await travelPlanService.getPlanById(req.params.id);
 

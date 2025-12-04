@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import AppError from "../../errorHelpers/AppError";
+import { IOptions } from "../../helpers/paginationHelper";
 import { prisma } from "../../utils/prisma";
 
 const createTravelPlan = async (userId: string, payload: any) => {
@@ -25,25 +26,47 @@ const createTravelPlan = async (userId: string, payload: any) => {
   return createPlan;
 };
 
-const getPublicPlans = async () => {
-  const result = await prisma.travelPlan.findMany({
-    where: {
-      visibility: true,
-    },
+const getPublicPlans = async (options: IOptions, filters: any) => {
+  const page = Number(options.page) || 1;
+  const limit = Number(options.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const where: any = { visibility: true };
+
+  // Filtering by start/end date
+  if (filters.startDateTime) where.startDate = { gte: new Date(filters.startDateTime) };
+  if (filters.endDateTime) where.endDate = { ...where.endDate, lte: new Date(filters.endDateTime) };
+
+  // Count total matching plans
+  const total = await prisma.travelPlan.count({ where });
+
+  const plans = await prisma.travelPlan.findMany({
+    where,
     include: {
       user: {
-        include: {
-          profile: true,
-        },
+        include: { profile: true },
       },
     },
-    orderBy: {
-      createdAt: "desc",
-    },
+    skip,
+    take: limit,
+    orderBy: options.sortBy
+      ? { [options.sortBy]: (options.sortOrder as "asc" | "desc") || "desc" }
+      : { createdAt: "desc" },
   });
 
-  return result;
+  return {
+    data: plans,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPage: Math.ceil(total / limit),
+    },
+  };
 };
+
+
+
 const getPlanById = async (id:string) => {
  const plan = await prisma.travelPlan.findUnique({
       where: { id },

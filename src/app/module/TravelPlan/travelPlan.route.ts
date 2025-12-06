@@ -6,11 +6,16 @@ import { Role } from "@prisma/client";
 
 const router = Router();
 
-router.post("/create-travelplan", checkAuth(...Object.values(Role)), TravelPlanController.createTravelPlan);
+router.post("/create-travelplan", checkAuth(Role.MODERATOR, Role.ADMIN, Role.SUPER_ADMIN), TravelPlanController.createTravelPlan);
 router.get("/", TravelPlanController.getPublicPlans);
-// router.get("/my", checkAuth("USER", "MODERATOR", "ADMIN", "SUPER_ADMIN"), TravelPlanController.getMyPlans);
+router.get("/my", checkAuth(Role.USER), TravelPlanController.getMyPlans);
 router.get("/:id", TravelPlanController.getPlanById);
-// router.patch("/:id", checkAuth("USER", "MODERATOR", "ADMIN", "SUPER_ADMIN"), TravelPlanController.updatePlan);
-// router.delete("/:id", checkAuth("USER", "MODERATOR", "ADMIN", "SUPER_ADMIN"), TravelPlanController.deletePlan);
+// ----------------------------- JOIN & LEAVE -----------------------------
+router.post("/join/:id", checkAuth(Role.USER), TravelPlanController.joinPlan);
+router.post("/leave/:id", checkAuth(Role.USER), TravelPlanController.leavePlan);
+
+// ----------------------------- UPDATE & DELETE (Optional) -----------------------------
+router.patch("/:id", checkAuth(Role.USER, Role.MODERATOR, Role.ADMIN, Role.SUPER_ADMIN), TravelPlanController.updatePlan);
+router.delete("/:id", checkAuth(Role.USER, Role.MODERATOR, Role.ADMIN, Role.SUPER_ADMIN), TravelPlanController.deletePlan);
 
 export const travelPlanRoute=router;

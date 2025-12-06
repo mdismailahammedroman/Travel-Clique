@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { envVars } from "../../config/envVars";
 import { createUserInput, updateUserInput } from "./user.interface";
 import { IOptions } from "../../helpers/paginationHelper";
+import { IJWTPayload } from "../../helpers/payload";
 
 // CREATE USER
 const createUser = async (data: createUserInput) => {
@@ -111,15 +112,12 @@ const updateUserRole = async (id: string, data: updateUserInput) => {
   });
 };
 
-const getCurrentUser = async (userId: string) => {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: { profile: true }, // include profile info
-  });
-
-  if (!user) {
-    throw new Error("User not found");
-  }
+// Service
+const getCurrentUser = async (payload: IJWTPayload) => {
+ const user = await prisma.user.findUnique({
+  where: { id: payload.id },
+  include: { profile: true },
+});
 
   return user;
 };

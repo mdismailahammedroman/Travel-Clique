@@ -4,6 +4,7 @@ import { authRoute } from "../module/auth/auth.route"
 import { otpRoutes } from "../otp/otp.router"
 import { travelPlanRoute } from "../module/TravelPlan/travelPlan.route"
 import { profileRouter } from "../module/Profile/profile.route"
+import { travelGroupRouter } from "../module/travelGroup/travelGroup.route"
 
 const router=express.Router()
 const RouterModule=[
@@ -27,6 +28,10 @@ const RouterModule=[
     {
         path:"/travelplan",
         route:travelPlanRoute,
+    } ,
+    {
+        path:"/travelgroup",
+        route:travelGroupRouter,
     } ,
 ]
 

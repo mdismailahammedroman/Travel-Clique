@@ -33,8 +33,22 @@ const getPublicPlans = async (options: IOptions, filters: any) => {
   const skip = (page - 1) * limit;
 
   const where: any = { visibility: true };
-  if (filters.startDateTime) where.startDate = { gte: new Date(filters.startDateTime) };
-  if (filters.endDateTime) where.endDate = { ...where.endDate, lte: new Date(filters.endDateTime) };
+
+  if (filters.destination) {
+    where.destination = { contains: filters.destination, mode: "insensitive" };
+  }
+
+  if (filters.travelType) {
+    where.travelType = filters.travelType;
+  }
+
+  if (filters.startDate) {
+    where.startDate = { gte: new Date(filters.startDate) };
+  }
+
+  if (filters.endDate) {
+    where.endDate = { lte: new Date(filters.endDate) };
+  }
 
   const total = await prisma.travelPlan.count({ where });
 
@@ -43,10 +57,18 @@ const getPublicPlans = async (options: IOptions, filters: any) => {
     include: { user: { include: { profile: true } }, group: true },
     skip,
     take: limit,
-    orderBy: options.sortBy ? { [options.sortBy]: (options.sortOrder as "asc" | "desc") || "desc" } : { createdAt: "desc" },
+    orderBy: options.sortBy ? { [options.sortBy]: options.sortOrder || "desc" } : { createdAt: "desc" },
   });
 
-  return { data: plans, meta: { total, page, limit, totalPage: Math.ceil(total / limit) } };
+  return {
+    data: plans,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPage: Math.ceil(total / limit),
+    },
+  };
 };
 
 const getPlanById = async (id: string) => {

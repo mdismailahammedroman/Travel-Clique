@@ -94,6 +94,7 @@ model TravelInterest {
   interest  String
 }
 
+
 model VisitedCountry {
   id        String   @id @default(cuid())
   profile   Profile  @relation(fields: [profileId], references: [id])

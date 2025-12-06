@@ -15,3 +15,13 @@ export interface updateUserInput {
   profileImage?: string;
     role?: "USER" | "MODERATOR" | "ADMIN" | "SUPER_ADMIN";
 }
+
+
+export interface updateProfileInput {
+  fullName?: string;
+  bio?: string;
+  currentLocation?: string;
+  profileImage?: string;
+  travelInterests?: string[];
+  visitedCountries?: string[];
+}

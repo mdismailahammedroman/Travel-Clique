@@ -11,7 +11,16 @@ router.patch(
   checkAuth(...Object.values(Role)),
   matchingUserController.updateMatchStatus
 );
-// router.get("/sent/:userId", checkAuth(...Object.values(Role)), matchingUserController.getSentMatches);
-// router.get("/received/:userId", checkAuth(...Object.values(Role)), matchingUserController.getReceivedMatches);
+router.get(
+  "/sent",
+  checkAuth(...Object.values(Role)),
+  matchingUserController.getSentMatches
+);
 
+// Get received matches with optional filters, sorting, pagination
+router.get(
+  "/received",
+  checkAuth(...Object.values(Role)),
+  matchingUserController.getReceivedMatches
+);
 export const matchRouter = router;

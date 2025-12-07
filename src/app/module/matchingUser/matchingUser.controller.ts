@@ -21,6 +21,25 @@ const sendMatch = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updateMatchStatus = catchAsync(async (req: Request, res: Response) => {
+  const receiverId = (req.user as IJWTPayload).id;
+  const { matchId, status } = req.body;
+
+  const updated = await matchService.updateMatchStatus(
+    matchId,
+    receiverId,
+    status
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: STATUS_CODES.OK,
+    message: "Match status updated",
+    data: updated,
+  });
+});
+
   export const matchingUserController={
     sendMatch,
+    updateMatchStatus
   }

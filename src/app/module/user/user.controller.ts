@@ -3,6 +3,9 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import STATUS_CODES from "http-status";
 import { userService } from "./user.service";
+import pick from "../../helpers/pick";
+import { IJWTPayload } from "../../helpers/payload";
+import AppError from "../../errorHelpers/AppError";
 
 // CREATE USER
 const createUser = catchAsync(async (req: Request, res: Response) => {
@@ -18,15 +21,21 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
 });
 
 // GET ALL USERS (ADMIN)
-const getUsers = catchAsync(async (_req: Request, res: Response) => {
-  const users = await userService.getUsers();
+const getUsers = catchAsync(async (req: Request, res: Response) => {
+  const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
+  const filters = pick(req.query, ["startDateTime", "endDateTime"]);
+
+  const users = await userService.getUsers(options, filters);
+
   sendResponse(res, {
     success: true,
     statusCode: STATUS_CODES.OK,
     message: "Users fetched successfully",
-    data: users,
+    data: users.data,
+    meta:users.meta
   });
 });
+
 
 // GET SINGLE USER
 const getUser = catchAsync(async (req: Request, res: Response) => {
@@ -69,12 +78,13 @@ const updateUserRole = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getCurrentUser = catchAsync(async (req: Request, res: Response) => {
-  // req.user is set by checkAuth middleware
-  if (!req.user?.id) {
-    throw new Error("User ID not found in request");
+
+
+  if (!req.user) {
+    throw new AppError(403, "User not authenticated");
   }
 
-  const user = await userService.getCurrentUser(req.user.id);
+  const user = await userService.getCurrentUser(req.user as IJWTPayload);
 
   sendResponse(res, {
     success: true,
@@ -83,6 +93,9 @@ const getCurrentUser = catchAsync(async (req: Request, res: Response) => {
     data: user,
   });
 });
+
+
+
 
 // DELETE USER
 const deleteUser = catchAsync(async (req: Request, res: Response) => {

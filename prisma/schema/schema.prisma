@@ -94,6 +94,7 @@ model TravelInterest {
   interest  String
 }
 
+
 model VisitedCountry {
   id        String   @id @default(cuid())
   profile   Profile  @relation(fields: [profileId], references: [id])
@@ -106,25 +107,24 @@ model VisitedCountry {
 // TRAVEL PLAN (Core Matching Feature)
 // -----------------------------------------------------
 model TravelPlan {
-  id           String      @id @default(cuid())
-  user         User        @relation(fields: [userId], references: [id])
-  userId       String
+    id             String        @id @default(cuid())
+  user           User          @relation(fields: [userId], references: [id])
+  userId         String
+  destination    String
+  startDate      DateTime
+  endDate        DateTime
+  budgetMin      Float?
+  budgetMax      Float?
+  travelType     TravelType
+  description    String?
+  visibility     Boolean       @default(true)
 
-  destination  String
-  startDate    DateTime
-  endDate      DateTime
-  budgetMin    Float?
-  budgetMax    Float?
-  travelType   TravelType
-  description  String?
-  visibility   Boolean     @default(true)
+  // Optional group
+  group          TravelGroup?  @relation("PlanToGroup", fields: [travelGroupId], references: [id])
+  travelGroupId  String?       @unique
 
-  // Optional group connection
-  group        TravelGroup?  @relation("PlanToGroup")
-  travelGroupId String?      @unique
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
 
 // -----------------------------------------------------
@@ -152,38 +152,31 @@ model Review {
 // GROUPS & MEETUPS (Paid Feature)
 // -----------------------------------------------------
 model TravelGroup {
-  id            String        @id @default(cuid())
+   id            String        @id @default(cuid())
   name          String
-
   creator       User          @relation("GroupCreator", fields: [creatorId], references: [id])
   creatorId     String
-
   destination   String
   startDate     DateTime
   endDate       DateTime
   isPaidGroup   Boolean       @default(true)
 
   members       GroupMember[]
-
-  // Connects with TravelPlan
-  travelPlan    TravelPlan?   @relation("PlanToGroup", fields: [travelPlanId], references: [id])
-  travelPlanId  String?       @unique
+  travelPlan    TravelPlan?   @relation("PlanToGroup")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model GroupMember {
-  id        String      @id @default(cuid())
-
+   id        String      @id @default(cuid())
   group     TravelGroup @relation(fields: [groupId], references: [id])
   groupId   String
-
   user      User        @relation(fields: [userId], references: [id])
   userId    String
-
   joinedAt  DateTime    @default(now())
   isActive  Boolean     @default(true)
+  @@unique([groupId, userId])
 }
 
 // -----------------------------------------------------

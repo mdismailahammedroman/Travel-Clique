@@ -1,5 +1,4 @@
 import { NextFunction, Request, Response } from "express";
-import httpStatus from "http-status-codes";
 import { JwtPayload } from "jsonwebtoken";
 import { verifyToken } from "../utils/jwt";
 import { envVars } from "../config/envVars";
@@ -17,7 +16,7 @@ declare global {
 }
 
 export const checkAuth =
-  (...authRoles: string[]) =>
+  (...allowedRoles: string[]) =>
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       // ONLY read token from cookies
@@ -42,23 +41,19 @@ export const checkAuth =
         where: { id: verifiedToken.id },
       });
 
-      if (!user) {
-        throw new AppError(httpStatus.BAD_REQUEST, "User does not exist");
-      }
+          if (!user) throw new AppError(404, "User not found");
 
       if (!user.isVerified) {
-        throw new AppError(httpStatus.BAD_REQUEST, "User is not verified");
+        throw new AppError(403, "User is not verified");
       }
 
-      // Optional: isActive / isDeleted logic if added in future
-
-      // Check role permissions
-      if (authRoles.length && !authRoles.includes(user.role)) {
-        throw new AppError(403, "You are not permitted to access this route");
+      if (allowedRoles.length && !allowedRoles.includes(user.role)) {
+        throw new AppError(403, "Forbidden");
       }
+
 
       // Attach user info to request
-      req.user = { id: user.id, role: user.role };
+      req.user = { id: user.id, role: user.role, email: user.email };
       next();
     } catch (error) {
       next(error);

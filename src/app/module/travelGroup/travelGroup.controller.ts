@@ -4,6 +4,7 @@ import { sendResponse } from "../../utils/sendResponse";
 import STATUS_CODES from "http-status";
 import { IJWTPayload } from "../../helpers/payload";
 import { travelGroupService } from "./travelGroup.service";
+import AppError from "../../errorHelpers/AppError";
 
 // CREATE
 const createTravelGroup = catchAsync(async (req: Request, res: Response) => {
@@ -63,6 +64,7 @@ const deleteTravelGroup = catchAsync(async (req: Request, res: Response) => {
 // ADD MEMBER
 const addMember = catchAsync(async (req: Request, res: Response) => {
   const { groupId, userId } = req.body;
+  
   const member = await travelGroupService.addGroupMember(groupId, userId);
   sendResponse(res, {
     success: true,
@@ -73,15 +75,26 @@ const addMember = catchAsync(async (req: Request, res: Response) => {
 });
 
 // REMOVE MEMBER
-const removeMember = catchAsync(async (req: Request, res: Response) => {
+const removeMember = catchAsync(async (req, res) => {
   const { groupId, userId } = req.body;
-  await travelGroupService.removeGroupMember(groupId, userId);
+  console.log("Controller received:", req.body);
+  if (!groupId || !userId) {
+    throw new AppError(400, "groupId and userId are required");
+  }
+
+  const result = await travelGroupService.removeGroupMember(
+    groupId as string,
+    userId as string
+  );
+
   sendResponse(res, {
     success: true,
-    statusCode: STATUS_CODES.OK,
+    statusCode: 200,
     message: "Member removed successfully",
+    data: result,
   });
 });
+
 
 export const travelGroupController = {
   createTravelGroup,

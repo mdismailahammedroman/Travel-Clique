@@ -1,3 +1,4 @@
+import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../utils/prisma";
 import { createTravelGroupInput, updateTravelGroupInput } from "./travelGroup.interface";
 
@@ -51,6 +52,27 @@ const deleteTravelGroup = async (id: string) => {
 
 // ADD MEMBER
 const addGroupMember = async (groupId: string, userId: string) => {
+  // Check if group exists
+  const group = await prisma.travelGroup.findUnique({ where: { id: groupId } });
+  if (!group) {
+    throw new AppError(404, "Travel group not found");
+  }
+
+  // Check if user exists
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new AppError(404, "User not found");
+  }
+
+  // Check if user is already a member
+  const existingMember = await prisma.groupMember.findFirst({
+    where: { groupId, userId },
+  });
+  if (existingMember) {
+    throw new AppError(400, "User is already a member of this group");
+  }
+
+  // Add member
   return prisma.groupMember.create({
     data: { groupId, userId },
   });
@@ -58,10 +80,20 @@ const addGroupMember = async (groupId: string, userId: string) => {
 
 // REMOVE MEMBER
 const removeGroupMember = async (groupId: string, userId: string) => {
-  return prisma.groupMember.deleteMany({
+  const member = await prisma.groupMember.findFirst({
     where: { groupId, userId },
   });
+
+  if (!member) {
+    throw new AppError(404, "Member not found in this group");
+  }
+
+  return prisma.groupMember.delete({
+    where: { id: member.id },
+  });
 };
+
+
 
 export const travelGroupService = {
   createTravelGroup,
@@ -72,3 +104,13 @@ export const travelGroupService = {
   addGroupMember,
   removeGroupMember,
 };
+
+
+// //{
+//   "name": "Summer Adventure 2026",
+//   "creatorId": "cmiuic35h000390uwfgemendy", 
+//   "destination": "Italy",
+//   "startDate": "2026-06-15T00:00:00.000Z",
+//   "endDate": "2026-06-25T00:00:00.000Z",
+//   "isPaidGroup": true
+// }

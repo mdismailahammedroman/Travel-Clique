@@ -176,6 +176,7 @@ model GroupMember {
   userId    String
   joinedAt  DateTime    @default(now())
   isActive  Boolean     @default(true)
+  @@unique([groupId, userId])
 }
 
 // -----------------------------------------------------

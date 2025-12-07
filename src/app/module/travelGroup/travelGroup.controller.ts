@@ -77,7 +77,6 @@ const addMember = catchAsync(async (req: Request, res: Response) => {
 // REMOVE MEMBER
 const removeMember = catchAsync(async (req, res) => {
   const { groupId, userId } = req.body;
-  console.log("Controller received:", req.body);
   if (!groupId || !userId) {
     throw new AppError(400, "groupId and userId are required");
   }

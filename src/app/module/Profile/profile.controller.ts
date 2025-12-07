@@ -66,7 +66,6 @@ const removeTravelInterest = catchAsync(async (req: Request, res: Response) => {
 const addVisitedCountry = catchAsync(async (req: Request, res: Response) => {
   const profileId = req.params.profileId;
   const country = req.body.country;
-    console.log("Adding country", profileId, country); 
   const result = await profileService.addVisitedCountry(profileId, country);
   sendResponse(res, {
     success: true,

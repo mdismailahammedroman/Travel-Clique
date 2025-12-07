@@ -5,6 +5,7 @@ import { otpRoutes } from "../otp/otp.router"
 import { travelPlanRoute } from "../module/TravelPlan/travelPlan.route"
 import { profileRouter } from "../module/Profile/profile.route"
 import { travelGroupRouter } from "../module/travelGroup/travelGroup.route"
+import { matchRouter } from "../module/matchingUser/matchingUser.route"
 
 const router=express.Router()
 const RouterModule=[
@@ -32,6 +33,10 @@ const RouterModule=[
     {
         path:"/travelgroup",
         route:travelGroupRouter,
+    } ,
+    {
+        path:"/match",
+        route:matchRouter,
     } ,
 ]
 

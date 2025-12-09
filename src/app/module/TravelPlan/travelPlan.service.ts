@@ -3,78 +3,91 @@ import AppError from "../../errorHelpers/AppError";
 import { IOptions } from "../../helpers/paginationHelper";
 import { IJWTPayload } from "../../helpers/payload";
 import { prisma } from "../../utils/prisma";
+import { ITravelPlanFilters } from "./travelPlan.interface";
 
-// ----------------------------- CREATE -----------------------------
+
+// ----------------------------- CREATE (WITH PAYMENT) -----------------------------
 const createTravelPlan = async (userId: string, payload: any) => {
-  if (!payload.destination) throw new AppError(400, "Destination is required");
-  if (!payload.startDate || !payload.endDate) throw new AppError(400, "Start date and end date are required");
+  const { amount, ...planData } = payload;
 
-  const plan = await prisma.travelPlan.create({
-    data: {
-      userId,
-      destination: payload.destination,
-      startDate: new Date(payload.startDate),
-      endDate: new Date(payload.endDate),
-      budgetMin: payload.budgetMin,
-      budgetMax: payload.budgetMax,
-      travelType: payload.travelType,
-      description: payload.description,
-      visibility: payload.visibility ?? true,
-    },
+  if (!amount) throw new AppError(400, "Payment amount is required");
+  if (!planData.destination) throw new AppError(400, "Destination is required");
+  if (!planData.startDate || !planData.endDate)
+    throw new AppError(400, "Start and end date are required");
+
+  return await prisma.$transaction(async (tx) => {
+    // 1️⃣ Create travel plan first
+    const plan = await tx.travelPlan.create({
+      data: {
+        userId,
+        destination: planData.destination,
+        startDate: new Date(planData.startDate),
+        endDate: new Date(planData.endDate),
+        budgetMin: planData.budgetMin,
+        budgetMax: planData.budgetMax,
+        travelType: planData.travelType,
+        description: planData.description,
+        visibility: false, // hidden until payment is verified
+      },
+    });
+
+    return {
+      plan,
+
+    };
   });
-
-  return plan;
 };
+
 
 // ----------------------------- READ -----------------------------
-const getPublicPlans = async (options: IOptions, filters: any) => {
-  const page = Number(options.page) || 1;
-  const limit = Number(options.limit) || 10;
-  const skip = (page - 1) * limit;
+const getPublicPlans = async (options: IOptions, filters: ITravelPlanFilters) => {
+   const page = Number(options.page) || 1;
+    const limit = Number(options.limit) || 10;
+    const skip = (page - 1) * limit;
 
-  const where: any = { visibility: true };
+    const where: any = { visibility: true };
 
-  if (filters.destination) {
-    where.destination = { contains: filters.destination, mode: "insensitive" };
-  }
+    if (filters.destination) {
+      where.destination = { contains: filters.destination, mode: "insensitive" };
+    }
 
-  if (filters.travelType) {
-    where.travelType = filters.travelType;
-  }
+    if (filters.travelType) {
+      where.travelType = filters.travelType;
+    }
 
-  if (filters.startDate) {
-    where.startDate = { gte: new Date(filters.startDate) };
-  }
+    if (filters.startDate) {
+      where.startDate = { gte: new Date(filters.startDate) };
+    }
 
-  if (filters.endDate) {
-    where.endDate = { lte: new Date(filters.endDate) };
-  }
+    if (filters.endDate) {
+      where.endDate = { lte: new Date(filters.endDate) };
+    }
 
-  const total = await prisma.travelPlan.count({ where });
+    const total = await prisma.travelPlan.count({ where });
 
-  const plans = await prisma.travelPlan.findMany({
-    where,
-    include: { user: { include: { profile: true } }, group: true },
-    skip,
-    take: limit,
-    orderBy: options.sortBy ? { [options.sortBy]: options.sortOrder || "desc" } : { createdAt: "desc" },
-  });
+    const plans = await prisma.travelPlan.findMany({
+      where,
+      include: { user: { include: { profile: true } } },
+      skip,
+      take: limit,
+      orderBy: options.sortBy ? { [options.sortBy]: options.sortOrder || "desc" } : { createdAt: "desc" },
+    });
 
-  return {
-    data: plans,
-    meta: {
-      total,
-      page,
-      limit,
-      totalPage: Math.ceil(total / limit),
-    },
+    return {
+      data: plans,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPage: Math.ceil(total / limit),
+      },
+    };
   };
-};
 
 const getPlanById = async (id: string) => {
   const plan = await prisma.travelPlan.findUnique({
     where: { id },
-    include: { user: { include: { profile: true } }, group: true },
+    include: { user: { include: { profile: true } } },
   });
   if (!plan) throw new AppError(404, "Travel plan not found");
   return plan;
@@ -94,49 +107,13 @@ const getMyPlans = async (jwt: IJWTPayload, options: IOptions, filters: any) => 
 
   const plans = await prisma.travelPlan.findMany({
     where,
-    include: { user: { include: { profile: true } }, group: true },
+    include: { user: { include: { profile: true } } },
     skip,
     take: limit,
     orderBy: options.sortBy ? { [options.sortBy]: options.sortOrder || "desc" } : { createdAt: "desc" },
   });
 
   return { data: plans, meta: { total, page, limit, totalPage: Math.ceil(total / limit) } };
-};
-
-// ----------------------------- JOIN -----------------------------
-const joinPlan = async (userId: string, planId: string) => {
-  const plan = await prisma.travelPlan.findUnique({
-    where: { id: planId },
-    include: { group: true },
-  });
-  if (!plan) throw new AppError(404, "Plan not found");
-
-  if (plan.group) {
-    const exists = await prisma.groupMember.findFirst({ where: { groupId: plan.group.id, userId } });
-    if (!exists) {
-      await prisma.groupMember.create({ data: { groupId: plan.group.id, userId } });
-    }
-  }
-if (!plan.group) {
-  throw new AppError(400, "This plan is not associated with any group yet");
-}
-
-  return plan;
-};
-
-// ----------------------------- LEAVE -----------------------------
-const leavePlan = async (userId: string, planId: string) => {
-  const plan = await prisma.travelPlan.findUnique({
-    where: { id: planId },
-    include: { group: true },
-  });
-  if (!plan) throw new AppError(404, "Plan not found");
-
-  if (plan.group) {
-    await prisma.groupMember.updateMany({ where: { groupId: plan.group.id, userId }, data: { isActive: false } });
-  }
-
-  return { message: "Left travel plan successfully" };
 };
 
 // ----------------------------- UPDATE -----------------------------
@@ -167,16 +144,11 @@ const updatePlan = async (userId: string, planId: string, payload: any) => {
 const deletePlan = async (userId: string, planId: string) => {
   const plan = await prisma.travelPlan.findUnique({
     where: { id: planId },
-    include: { group: true },
   });
   if (!plan) throw new AppError(404, "Travel plan not found");
 
   if (plan.userId !== userId) throw new AppError(403, "You are not allowed to delete this travel plan");
 
-  if (plan.group) {
-    await prisma.groupMember.deleteMany({ where: { groupId: plan.group.id } });
-    await prisma.travelGroup.delete({ where: { id: plan.group.id } });
-  }
 
   await prisma.travelPlan.delete({ where: { id: planId } });
 
@@ -188,8 +160,6 @@ export const travelPlanService = {
   getPublicPlans,
   getPlanById,
   getMyPlans,
-  joinPlan,
-  leavePlan,
   updatePlan,
   deletePlan,
 };

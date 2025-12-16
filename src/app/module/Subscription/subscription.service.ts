@@ -1,67 +1,93 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Stripe from "stripe";
 import { prisma } from "../../utils/prisma";
 import AppError from "../../errorHelpers/AppError";
 import { envVars } from "../../config/envVars";
 import { ICreateCheckoutSession } from "./subscription.interface";
-import { SubscriptionType } from "@prisma/client";
+import { SubscriptionType, PaymentStatus } from "@prisma/client";
 import { stripe } from "../../helpers/stripe";
 
+// CREATE CHECKOUT SESSION
+const createCheckoutSession = async ({ userId, subscriptionType }: ICreateCheckoutSession) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new AppError(404, "User not found");
 
-const subscriptionService = {
-  // CREATE STRIPE CHECKOUT SESSION
-  createCheckoutSession: async ({ subscriptionType, userId }: ICreateCheckoutSession) => {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new AppError(404, "User not found");
+  // Choose Stripe recurring price ID
+  const priceId =
+    subscriptionType === SubscriptionType.MONTHLY
+      ? envVars.price_monthly
+      : envVars.price_yearly;
 
-    const priceId =
-      subscriptionType === SubscriptionType.MONTHLY
-        ? envVars.price_monthly
-        : envVars.price_yearly;
+  // ⚠️ Make sure the Stripe price is a recurring subscription
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription", // ✅ must be "subscription"
+    customer_email: user.email,
+    line_items: [{ price: priceId, quantity: 1 }],
+    success_url: `${envVars.FRONT_END_URL}/subscription-success`,
+    cancel_url: `${envVars.FRONT_END_URL}/subscription-cancel`,
+    metadata: {
+      userId,
+      subscriptionType,
+    },
+  });
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      payment_method_types: ["card"],
-      customer_email: user.email,
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${envVars.FONT_END_URL}/subscriptions/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${envVars.FONT_END_URL}/subscriptions/cancel`,
-      metadata: { userId, subscriptionType },
-    });
+  return {
+    id: session.id,
+    url: session.url,
+  };
+};
 
-    return session;
-  },
 
-  // HANDLE STRIPE WEBHOOK
-  stripeWebhook: async (event: Stripe.Event) => {
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.metadata?.userId;
-        const subscriptionTypeStr = session.metadata?.subscriptionType;
+// STRIPE WEBHOOK
+const stripeWebhook = async (event: Stripe.Event) => {
+  switch (event.type) {
+    case "checkout.session.completed": {
+      const session = event.data.object as Stripe.Checkout.Session;
 
-        if (!userId || !subscriptionTypeStr) break;
+      const userId = session.metadata?.userId;
+      const typeStr = session.metadata?.subscriptionType;
 
-        const subscriptionType: SubscriptionType =
-          subscriptionTypeStr === "MONTHLY" ? SubscriptionType.MONTHLY : SubscriptionType.YEARLY;
+      if (!userId || !typeStr) {
+        console.error("❌ METADATA MISSING IN CHECKOUT SESSION");
+        return { received: true };
+      }
 
-        const startDate = new Date();
-        const endDate =
-          subscriptionType === SubscriptionType.MONTHLY
-            ? new Date(new Date().setMonth(startDate.getMonth() + 1))
-            : new Date(new Date().setFullYear(startDate.getFullYear() + 1));
+      const subscriptionType =
+        typeStr === "MONTHLY"
+          ? SubscriptionType.MONTHLY
+          : SubscriptionType.YEARLY;
 
-        // Save Payment and Subscription atomically
+      const stripeSubscriptionId =
+        typeof session.subscription === "string" ? session.subscription : null;
+
+      if (!stripeSubscriptionId) {
+        console.error("❌ Stripe subscription ID missing");
+        return { received: true };
+      }
+
+      const startDate = new Date();
+      const endDate =
+        subscriptionType === SubscriptionType.MONTHLY
+          ? new Date(new Date().setMonth(startDate.getMonth() + 1))
+          : new Date(new Date().setFullYear(startDate.getFullYear() + 1));
+
+      try {
         await prisma.$transaction(async (tx) => {
+          // 1️⃣ Create payment record
           const payment = await tx.payment.create({
             data: {
               userId,
-              amount: (session.amount_total ?? 0) / 100, // Stripe amount is in cents
-              currency: (session.currency ?? "USD").toUpperCase(),
-              status: session.payment_status === "paid" ? "SUCCESS" : "FAILED",
-              invoiceUrl: session.url,
+              amount: (session.amount_total ?? 0) / 100,
+              currency: session.currency?.toUpperCase() ?? "USD",
+              status:
+                session.payment_status === "paid"
+                  ? PaymentStatus.SUCCESS
+                  : PaymentStatus.FAILED,
+              invoiceUrl: session.invoice ? String(session.invoice) : null,
             },
           });
 
+          // 2️⃣ Create subscription record
           await tx.subscription.create({
             data: {
               userId,
@@ -71,28 +97,44 @@ const subscriptionService = {
               isActive: true,
               verifiedBadge: true,
               paymentId: payment.id,
+              stripeSubscriptionId, // ⚡ important
             },
           });
         });
-        break;
+
+        console.log(`✔ Subscription created for user ${userId}`);
+      } catch (err) {
+        console.error("❌ Failed to store subscription:", err);
       }
 
-      default:
-        break;
+      break;
     }
 
-    return { received: true };
-  },
+    default:
+      console.log("Unhandled event:", event.type);
+  }
 
-  // GET USER SUBSCRIPTIONS (History)
-  getMySubscriptions: async (userId: string) => {
-    const subscriptions = await prisma.subscription.findMany({
-      where: { userId },
-      include: { payment: true },
-      orderBy: { createdAt: "desc" },
-    });
-    return subscriptions;
-  },
+  return { received: true };
 };
 
-export default subscriptionService;
+// GET MY SUBSCRIPTIONS
+const getMySubscriptions = async (userId: string) => {
+  return prisma.subscription.findMany({
+    where: { userId },
+    include: { payment: true },
+    orderBy: { createdAt: "desc" },
+  });
+};
+const checkActiveSubscription = async (userId: string) => {
+  return prisma.subscription.findFirst({
+    where: { userId, isActive: true, endDate: { gte: new Date() } },
+    orderBy: { endDate: "desc" },
+  });
+};
+
+export const subscriptionService = {
+  createCheckoutSession,
+  stripeWebhook,
+  getMySubscriptions,
+  checkActiveSubscription,
+};

@@ -9,10 +9,9 @@ const router = Router();
 // CREATE STRIPE CHECKOUT SESSION
 router.post("/create-checkout-session", checkAuth(Role.USER), subscriptionController.createCheckoutSession);
 
-// STRIPE WEBHOOK
-router.post("/webhook", subscriptionController.stripeWebhook);
+// ❌ WEBHOOK ROUTE REMOVED: It is now handled directly in app.ts for middleware ordering reasons.
 
 // GET MY SUBSCRIPTIONS
 router.get("/my", checkAuth(Role.USER), subscriptionController.getMySubscriptions);
 
-export default router;
+export const subscriptionRoute = router;

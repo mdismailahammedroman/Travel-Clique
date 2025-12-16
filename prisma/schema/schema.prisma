@@ -55,11 +55,14 @@ model User {
   reviewsReceived Review[]      @relation("Reviewed")
   subscriptions   Subscription[]
   payments        Payment[]
+   members     GroupMember[]
   matchesSent     Match[]       @relation("MatchSender")
   matchesReceived Match[]       @relation("MatchReceiver")
   isBlocked       Boolean       @default(false)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  groups Group[]
 }
 
 // PROFILE
@@ -151,35 +154,68 @@ model Match {
 
 // SUBSCRIPTION
 model Subscription {
-  id            String      @id @default(cuid())
-  user          User        @relation(fields: [userId], references: [id])
-  userId        String
+  id                 String      @id @default(cuid())
+  user               User        @relation(fields: [userId], references: [id])
+  userId             String
 
-  type          SubscriptionType
-  startDate     DateTime
-  endDate       DateTime
-  isActive      Boolean     @default(true)
-  verifiedBadge Boolean     @default(false)
+  type               SubscriptionType
+  startDate          DateTime
+  endDate            DateTime
+  isActive           Boolean     @default(true)
+  verifiedBadge      Boolean     @default(false)
 
-  payment       Payment?    @relation(fields: [paymentId], references: [id])
-  paymentId     String?     @unique
+  payment            Payment?    @relation(fields: [paymentId], references: [id])
+  paymentId          String?     @unique
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  stripeSubscriptionId String?   // ✅ This must be here
+
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 }
 
+
 model Payment {
-  id             String        @id @default(cuid())
-  user           User          @relation(fields: [userId], references: [id])
-  userId         String
+  id                   String        @id @default(cuid())
+  user                 User          @relation(fields: [userId], references: [id])
+  userId               String
 
-  amount         Float
-  currency       String       @default("USD")
-  status         PaymentStatus
+  amount               Float
+  currency             String       @default("USD")
+  status               PaymentStatus
 
-  invoiceUrl     String?
-  subscription   Subscription? @relation
+  invoiceUrl           String?
+  subscription         Subscription? @relation
+  stripeSubscriptionId String? 
 
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+}
+
+model Group {
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  destination String
+  createdBy   String
+  creator     User           @relation(fields: [createdBy], references: [id])
+  createdAt   DateTime       @default(now())
+
+  members     GroupMember[]
+}
+
+model GroupMember {
+  id        String   @id @default(uuid())
+  groupId   String
+  userId    String
+  role      GroupRole @default(MEMBER)
+  joinedAt  DateTime  @default(now())
+
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum GroupRole {
+  OWNER
+  MODERATOR
+  MEMBER
 }

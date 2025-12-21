@@ -6,10 +6,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
-// -----------------------------------------------------
 // ENUMS
-// -----------------------------------------------------
 enum Role {
   USER
   MODERATOR
@@ -40,7 +37,7 @@ enum SubscriptionType {
   YEARLY
 }
 
-
+// USER MODEL
 model User {
   id              String        @id @default(cuid())
   email           String        @unique
@@ -54,22 +51,21 @@ model User {
 
   profile         Profile?
   travelPlans     TravelPlan[]
-  groupsCreated   TravelGroup[] @relation("GroupCreator")
-  groupMembers    GroupMember[]
   reviewsGiven    Review[]      @relation("Reviewer")
   reviewsReceived Review[]      @relation("Reviewed")
   subscriptions   Subscription[]
   payments        Payment[]
+   members     GroupMember[]
   matchesSent     Match[]       @relation("MatchSender")
   matchesReceived Match[]       @relation("MatchReceiver")
+  isBlocked       Boolean       @default(false)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  groups Group[]
 }
 
-
-// -----------------------------------------------------
-// PROFILE (User Public Profile)
-// -----------------------------------------------------
+// PROFILE
 model Profile {
   id               String     @id @default(cuid())
   user             User       @relation(fields: [userId], references: [id])
@@ -90,26 +86,22 @@ model TravelInterest {
   id        String   @id @default(cuid())
   profile   Profile  @relation(fields: [profileId], references: [id])
   profileId String
-
   interest  String
 }
-
 
 model VisitedCountry {
   id        String   @id @default(cuid())
   profile   Profile  @relation(fields: [profileId], references: [id])
   profileId String
-
   country   String
 }
 
-// -----------------------------------------------------
-// TRAVEL PLAN (Core Matching Feature)
-// -----------------------------------------------------
+// TRAVEL PLAN
 model TravelPlan {
-    id             String        @id @default(cuid())
-  user           User          @relation(fields: [userId], references: [id])
+  id             String      @id @default(cuid())
+  user           User        @relation(fields: [userId], references: [id])
   userId         String
+
   destination    String
   startDate      DateTime
   endDate        DateTime
@@ -117,19 +109,13 @@ model TravelPlan {
   budgetMax      Float?
   travelType     TravelType
   description    String?
-  visibility     Boolean       @default(true)
+  visibility     Boolean     @default(true)
 
-  // Optional group
-  group          TravelGroup?  @relation("PlanToGroup", fields: [travelGroupId], references: [id])
-  travelGroupId  String?       @unique
-
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 }
 
-// -----------------------------------------------------
 // REVIEW SYSTEM
-// -----------------------------------------------------
 model Review {
   id           String   @id @default(cuid())
 
@@ -145,43 +131,10 @@ model Review {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([reviewerId, reviewedId]) // user can review once
+  @@unique([reviewerId, reviewedId])
 }
 
-// -----------------------------------------------------
-// GROUPS & MEETUPS (Paid Feature)
-// -----------------------------------------------------
-model TravelGroup {
-   id            String        @id @default(cuid())
-  name          String
-  creator       User          @relation("GroupCreator", fields: [creatorId], references: [id])
-  creatorId     String
-  destination   String
-  startDate     DateTime
-  endDate       DateTime
-  isPaidGroup   Boolean       @default(true)
-
-  members       GroupMember[]
-  travelPlan    TravelPlan?   @relation("PlanToGroup")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model GroupMember {
-   id        String      @id @default(cuid())
-  group     TravelGroup @relation(fields: [groupId], references: [id])
-  groupId   String
-  user      User        @relation(fields: [userId], references: [id])
-  userId    String
-  joinedAt  DateTime    @default(now())
-  isActive  Boolean     @default(true)
-  @@unique([groupId, userId])
-}
-
-// -----------------------------------------------------
-// MATCHING SYSTEM
-// -----------------------------------------------------
+// MATCH SYSTEM
 model Match {
   id            String       @id @default(cuid())
 
@@ -199,41 +152,70 @@ model Match {
   @@unique([senderId, receiverId])
 }
 
-// -----------------------------------------------------
-// SUBSCRIPTION SYSTEM
-// -----------------------------------------------------
+// SUBSCRIPTION
 model Subscription {
-  id            String            @id @default(cuid())
-  user          User              @relation(fields: [userId], references: [id])
-  userId        String
+  id                 String      @id @default(cuid())
+  user               User        @relation(fields: [userId], references: [id])
+  userId             String
 
-  type          SubscriptionType
+  type               SubscriptionType
+  startDate          DateTime
+  endDate            DateTime
+  isActive           Boolean     @default(true)
+  verifiedBadge      Boolean     @default(false)
 
-  startDate     DateTime
-  endDate       DateTime
+  payment            Payment?    @relation(fields: [paymentId], references: [id])
+  paymentId          String?     @unique
 
-  isActive      Boolean           @default(true)
-  verifiedBadge Boolean           @default(false)
+  stripeSubscriptionId String?   // ✅ This must be here
 
-  paymentId     String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 }
 
-// -----------------------------------------------------
-// PAYMENT SYSTEM
-// -----------------------------------------------------
+
 model Payment {
-  id            String        @id @default(cuid())
-  user          User          @relation(fields: [userId], references: [id])
-  userId        String
+  id                   String        @id @default(cuid())
+  user                 User          @relation(fields: [userId], references: [id])
+  userId               String
 
-  amount        Float
-  currency      String         @default("USD")
-  status        PaymentStatus
+  amount               Float
+  currency             String       @default("USD")
+  status               PaymentStatus
 
-  invoiceUrl    String?        // cloudinary or storage link
-  subscriptionId String?
+  invoiceUrl           String?
+  subscription         Subscription? @relation
+  stripeSubscriptionId String? 
 
-  createdAt     DateTime       @default(now())
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+}
+
+model Group {
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  destination String
+  createdBy   String
+  creator     User           @relation(fields: [createdBy], references: [id])
+  createdAt   DateTime       @default(now())
+
+  members     GroupMember[]
+}
+
+model GroupMember {
+  id        String   @id @default(uuid())
+  groupId   String
+  userId    String
+  role      GroupRole @default(MEMBER)
+  joinedAt  DateTime  @default(now())
+
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum GroupRole {
+  OWNER
+  MODERATOR
+  MEMBER
 }

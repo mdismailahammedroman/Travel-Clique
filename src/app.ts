@@ -1,33 +1,43 @@
 import express, { Application } from "express";
-import { envVars } from "./app/config/envVars";
-import cookieParser from "cookie-parser";
 import cors from "cors";
-import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import { envVars } from "./app/config/envVars";
 import router from "./app/router";
-import { golobalErrorHandler } from "./app/middleware/golobalErrorHandler";
-
-dotenv.config();
+// ⚠️ Adjust path if needed
+import { subscriptionController } from "./app/module/Subscription/subscription.controller"; 
 
 const app: Application = express();
 
-app.use(express.json());
+/**
+ * ✅ STRIPE WEBHOOK - MUST BE FIRST
+ * Uses express.raw() to get the necessary raw body (Buffer) for signature verification.
+ */
+app.post(
+  "/api/v1/subscriptions/webhook", 
+  express.raw({ type: "application/json" }),
+  subscriptionController.stripeWebhook
+);
+
+/**
+ * ✅ Normal middlewares AFTER webhook
+ */
+app.use(express.json()); // Global JSON parser is now safe
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: envVars.FONT_END_URL || "*",
+    origin: envVars.FRONT_END_URL || "*",
     credentials: true,
   })
 );
 
 app.get("/", (_req, res) => {
-  res.send("✅ Doctor Appointment API is running!");
+  res.send("API Working...");
 });
 
-// routes
+/**
+ * ✅ API ROUTES
+ */
 app.use("/api/v1", router);
-
-// global error handler
-app.use(golobalErrorHandler);
 
 export default app;

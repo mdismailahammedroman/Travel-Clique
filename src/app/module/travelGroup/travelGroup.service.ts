@@ -1,82 +1,84 @@
 import AppError from "../../errorHelpers/AppError";
 import { prisma } from "../../utils/prisma";
-import { createTravelGroupInput, updateTravelGroupInput } from "./travelGroup.interface";
-
-// CREATE
-const createTravelGroup = async (creatorId: string, data: createTravelGroupInput) => {
-  return prisma.travelGroup.create({
-    data: {
-      creatorId,
-      name: data.name,
-      destination: data.destination,
-      startDate: new Date(data.startDate),
-      endDate: new Date(data.endDate),
-      isPaidGroup: data.isPaidGroup ?? true,
-    },
-  });
-};
-
-// GET ALL
-const getTravelGroups = async () => {
-  return prisma.travelGroup.findMany({
-    include: { members: { include: { user: true } }, travelPlan: true },
-  });
-};
-
-// GET SINGLE
-const getTravelGroupById = async (id: string) => {
-  return prisma.travelGroup.findUnique({
-    where: { id },
-    include: { members: { include: { user: true } }, travelPlan: true },
-  });
-};
-
-// UPDATE
-const updateTravelGroup = async (id: string, data: updateTravelGroupInput) => {
-  return prisma.travelGroup.update({
-    where: { id },
-    data: {
-      name: data.name,
-      destination: data.destination,
-      startDate: data.startDate ? new Date(data.startDate) : undefined,
-      endDate: data.endDate ? new Date(data.endDate) : undefined,
-      isPaidGroup: data.isPaidGroup,
-    },
-  });
-};
+import { subscriptionService } from "../Subscription/subscription.service";
 
 // DELETE
 const deleteTravelGroup = async (id: string) => {
-  return prisma.travelGroup.delete({ where: { id } });
+  return prisma.group.delete({ where: { id } });
 };
 
-// ADD MEMBER
-const addGroupMember = async (groupId: string, userId: string) => {
-  // Check if group exists
-  const group = await prisma.travelGroup.findUnique({ where: { id: groupId } });
+const joinPlan = async (userId: string, planId: string) => {
+  // 1. Check if plan exists
+  const plan = await prisma.travelPlan.findUnique({ where: { id: planId } });
+  if (!plan) throw new AppError(404, "Travel plan not found");
+
+  // 2. Check for active subscription
+  const activeSubscription = await prisma.subscription.findFirst({
+    where: {
+      userId,
+      isActive: true,
+      endDate: { gte: new Date() },
+    },
+  });
+
+  // If no subscription → create Stripe checkout session
+  if (!activeSubscription) {
+    const session = await subscriptionService.createCheckoutSession({
+      subscriptionType: "MONTHLY",
+      userId,
+    });
+
+    return {
+      message: "You need an active subscription to join this travel plan group",
+      checkoutUrl: session.url as string,
+      requiresSubscription: true,
+    };
+  }
+
+  // 3. Find or create group for this travel plan
+  let group = await prisma.group.findFirst({
+    where: { name: `Plan-${planId}` },
+    include: { members: true },
+  });
+
   if (!group) {
-    throw new AppError(404, "Travel group not found");
+    group = await prisma.group.create({
+      data: {
+        name: `Plan-${plan.id}`,
+        description: plan.description,
+        destination: plan.destination,
+        createdBy: plan.userId,
+        members: { create: [{ userId: plan.userId, role: "OWNER" }] },
+      },
+      include: { members: true },
+    });
   }
 
-  // Check if user exists
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) {
-    throw new AppError(404, "User not found");
-  }
+  // 4. Check if user already joined
+  const alreadyJoined = group.members.find((m) => m.userId === userId);
+  if (alreadyJoined) throw new AppError(400, "You already joined this travel plan");
 
-  // Check if user is already a member
-  const existingMember = await prisma.groupMember.findFirst({
-    where: { groupId, userId },
+  // 5. Add user as MEMBER
+  const member = await prisma.groupMember.create({
+    data: { groupId: group.id, userId, role: "MEMBER" },
   });
-  if (existingMember) {
-    throw new AppError(400, "User is already a member of this group");
-  }
 
-  // Add member
-  return prisma.groupMember.create({
-    data: { groupId, userId },
+  // 6. Return updated group
+  const updatedGroup = await prisma.group.findUnique({
+    where: { id: group.id },
+    include: { members: { include: { user: true } } },
   });
+
+  return {
+    message: "Successfully joined the travel group",
+    group: updatedGroup,
+    requiresSubscription: false,
+    newMember: member,
+  };
 };
+
+
+
 
 // REMOVE MEMBER
 const removeGroupMember = async (groupId: string, userId: string) => {
@@ -96,12 +98,9 @@ const removeGroupMember = async (groupId: string, userId: string) => {
 
 
 export const travelGroupService = {
-  createTravelGroup,
-  getTravelGroups,
-  getTravelGroupById,
-  updateTravelGroup,
+
   deleteTravelGroup,
-  addGroupMember,
+  joinPlan,
   removeGroupMember,
 };
 

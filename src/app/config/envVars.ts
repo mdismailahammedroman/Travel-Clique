@@ -30,16 +30,20 @@ interface RedisConfig {
 interface EnvConfig {
   NODE_ENV: string;
   PORT: number;
-  FONT_END_URL: string;
+  FRONT_END_URL: string;
   JWT_SECRET: string;
   JWT_EXPIRES_IN: string;
   JWT_REFRESH_SECRET: string;
-  JWT_REFRESH_EXPIRES_IN:string;
+  JWT_REFRESH_EXPIRES_IN: string;
   SALT_ROUNDS?: string;
   CLOUDINARY: cloudinaryConfig;
   SUPER_ADMIN?: superAdminConfig;
   SMTP_CONFIG: SmtpConfig;
   REDIS: RedisConfig;
+  STRIPE_SECRET_KEY: string;
+  STRIPE_WEBHOOK_SECRET: string;
+  price_monthly:string,
+price_yearly:string,
 }
 
 const loadEnvVariables = (): EnvConfig => {
@@ -67,6 +71,10 @@ const loadEnvVariables = (): EnvConfig => {
     "REDIS_PORT",
     "REDIS_USERNAME",
     "REDIS_PASSWORD",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "price_monthly",
+"price_yearly",
   ];
 
   requiredEnvVariables.forEach((key) => {
@@ -78,7 +86,7 @@ const loadEnvVariables = (): EnvConfig => {
   return {
     NODE_ENV: process.env.NODE_ENV as string,
     PORT: Number(process.env.PORT as string),
-    FONT_END_URL: process.env.FRONT_END_URL as string,
+    FRONT_END_URL: process.env.FRONT_END_URL as string,
     JWT_SECRET: process.env.JWT_SECRET as string,
     JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN as string,
     JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET as string,
@@ -108,6 +116,10 @@ const loadEnvVariables = (): EnvConfig => {
       REDIS_USERNAME: process.env.REDIS_USERNAME as string,
       REDIS_PASSWORD: process.env.REDIS_PASSWORD as string,
     },
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY as string,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET as string,
+    price_monthly:process.env.price_monthly as string,
+price_yearly:process.env.price_yearly as string,
   };
 };
 

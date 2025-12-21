@@ -70,7 +70,11 @@ const updatePlan = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.id;
   if (!userId) throw new AppError(401, "User not authenticated");
 
-  const result = await travelPlanService.updatePlan(userId, req.params.id, req.body);
+  const result = await travelPlanService.updatePlan(
+    userId,
+    req.params.id,
+    req.body
+  );
 
   sendResponse(res, {
     message: "Travel plan updated successfully",
@@ -81,52 +85,6 @@ const updatePlan = catchAsync(async (req: Request, res: Response) => {
 });
 
 // Delete a travel plan
-const deletePlan = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
-  if (!userId) throw new AppError(401, "User not authenticated");
-
-  const result = await travelPlanService.deletePlan(userId, req.params.id);
-
-  sendResponse(res, {
-    message: "Travel plan deleted successfully",
-    statusCode: httpStatus.OK,
-    success: true,
-    data: result,
-  });
-});
-
-
-// ----------------------------- JOIN PLAN -----------------------------
-const joinPlan = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
-  if (!userId) throw new AppError(401, "User not authenticated");
-
-  const planId = req.params.id;
-  const result = await travelPlanService.joinPlan(userId, planId);
-
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: "Joined travel plan successfully",
-    data: result,
-  });
-});
-
-// ----------------------------- LEAVE PLAN -----------------------------
-const leavePlan = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id;
-  if (!userId) throw new AppError(401, "User not authenticated");
-
-  const planId = req.params.id;
-  const result = await travelPlanService.leavePlan(userId, planId);
-
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: "Left travel plan successfully",
-    data: result,
-  });
-});
 
 export const TravelPlanController = {
   createTravelPlan,
@@ -134,7 +92,4 @@ export const TravelPlanController = {
   getPlanById,
   getMyPlans,
   updatePlan,
-  deletePlan,
-  joinPlan,
-  leavePlan,
 };

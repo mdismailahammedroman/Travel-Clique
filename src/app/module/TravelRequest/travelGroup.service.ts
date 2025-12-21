@@ -38,7 +38,7 @@ const getGroups = async () => {
 };
 
 const getGroupById = async (groupId: string) => {
-  const group = await prisma.travelGroup.findUnique({
+  const group = await prisma.group.findUnique({
     where: { id: groupId },
     include: {
       creator: true,
@@ -48,28 +48,6 @@ const getGroupById = async (groupId: string) => {
   });
 
   if (!group) throw new AppError(404, "Group not found");
-
-  return group;
-};
-
-const joinGroup = async (userId: string, groupId: string) => {
-  const group = await prisma.travelGroup.findUnique({
-    where: { id: groupId },
-    include: { members: true },
-  });
-
-  if (!group) throw new AppError(404, "Group not found");
-
-  // Check if already joined
-  const exists = group.members.find((m) => m.userId === userId);
-  if (exists) return group;
-
-  await prisma.groupMember.create({
-    data: {
-      groupId,
-      userId,
-    },
-  });
 
   return group;
 };
@@ -101,7 +79,6 @@ export const travelGroupService = {
   createGroup,
   getGroups,
   getGroupById,
-  joinGroup,
   leaveGroup,
   getGroupMembers,
 };

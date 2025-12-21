@@ -7,26 +7,46 @@ import AppError from "../../errorHelpers/AppError";
 import pick from "../../helpers/pick";
 import { IJWTPayload } from "../../helpers/payload";
 
-// Create a travel plan
+/**
+ * CREATE PLAN
+ */
 const createTravelPlan = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.id;
   if (!userId) throw new AppError(401, "User not authenticated");
 
   const result = await travelPlanService.createTravelPlan(userId, req.body);
+
+  if ("checkoutUrl" in result) {
+    return sendResponse(res, {
+      success: false,
+      statusCode: 402,
+      message: result.message,
+      data: { checkoutUrl: result.checkoutUrl },
+    });
+  }
+
   sendResponse(res, {
-    message: "Travel plan created successfully",
-    statusCode: httpStatus.CREATED,
     success: true,
+    statusCode: httpStatus.CREATED,
+    message: "Travel plan created successfully",
     data: result,
   });
 });
 
-// Get public travel plans
+/**
+ * PUBLIC PLANS
+ */
 const getPublicPlans = catchAsync(async (req: Request, res: Response) => {
-  const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
-  const filters = pick(req.query, ["startDateTime", "endDateTime"]);
+  const options = pick(req.query, ["page", "limit"]);
+  const filters = pick(req.query, [
+    "destination",
+    "travelType",
+    "startDate",
+    "endDate",
+  ]);
 
   const result = await travelPlanService.getPublicPlans(options, filters);
+
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
@@ -35,21 +55,26 @@ const getPublicPlans = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-// Get travel plan by ID
+/**
+ * GET BY ID
+ */
 const getPlanById = catchAsync(async (req: Request, res: Response) => {
   const result = await travelPlanService.getPlanById(req.params.id);
+
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: "Travel plan retrieved successfully",
+    message: "Travel plan retrieved",
     data: result,
   });
 });
 
-// Get user's own travel plans
+/**
+ * MY PLANS
+ */
 const getMyPlans = catchAsync(async (req: Request, res: Response) => {
-  const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
-  const filters = pick(req.query, ["startDateTime", "endDateTime"]);
+  const options = pick(req.query, ["page", "limit"]);
+  const filters = pick(req.query, ["startDate", "endDate"]);
 
   const result = await travelPlanService.getMyPlans(
     req.user as IJWTPayload,
@@ -60,12 +85,14 @@ const getMyPlans = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
     success: true,
-    message: "User travel plans retrieved successfully",
+    message: "My travel plans retrieved",
     data: result,
   });
 });
 
-// Update a travel plan
+/**
+ * UPDATE
+ */
 const updatePlan = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.id;
   if (!userId) throw new AppError(401, "User not authenticated");
@@ -77,7 +104,7 @@ const updatePlan = catchAsync(async (req: Request, res: Response) => {
   );
 
   sendResponse(res, {
-    message: "Travel plan updated successfully",
+    message: "Travel plan updated",
     statusCode: httpStatus.OK,
     success: true,
     data: result,
@@ -85,6 +112,51 @@ const updatePlan = catchAsync(async (req: Request, res: Response) => {
 });
 
 // Delete a travel plan
+const deletePlan = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) throw new AppError(401, "User not authenticated");
+
+  const result = await travelPlanService.deletePlan(userId, req.params.id);
+
+  sendResponse(res, {
+    message: "Travel plan deleted successfully",
+    statusCode: httpStatus.OK,
+    success: true,
+    data: result,
+  });
+});
+
+// ----------------------------- JOIN PLAN -----------------------------
+const joinPlan = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) throw new AppError(401, "User not authenticated");
+
+  const planId = req.params.id;
+  const result = await travelPlanService.joinPlan(userId, planId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Joined travel plan successfully",
+    data: result,
+  });
+});
+
+// ----------------------------- LEAVE PLAN -----------------------------
+const leavePlan = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?.id;
+  if (!userId) throw new AppError(401, "User not authenticated");
+
+  const planId = req.params.id;
+  const result = await travelPlanService.leavePlan(userId, planId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: "Left travel plan successfully",
+    data: result,
+  });
+});
 
 export const TravelPlanController = {
   createTravelPlan,
@@ -92,4 +164,7 @@ export const TravelPlanController = {
   getPlanById,
   getMyPlans,
   updatePlan,
+  deletePlan,
+  joinPlan,
+  leavePlan,
 };

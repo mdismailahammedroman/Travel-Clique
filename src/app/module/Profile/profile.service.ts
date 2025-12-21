@@ -70,9 +70,7 @@ const removeTravelInterest = async (interestId: string) => {
 
 // ADD VISITED COUNTRY
 const addVisitedCountry = async (profileId: string, country: string) => {
-   console.log("Profile ID:", profileId);
-  console.log("Country:", country);
-  
+   
     const profile = await prisma.profile.findUnique({ where: { id: profileId } });
   if (!profile) throw new Error("Profile not found");
 

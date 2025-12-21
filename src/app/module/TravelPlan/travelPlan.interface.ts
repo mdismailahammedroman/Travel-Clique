@@ -23,3 +23,11 @@ export interface updateTravelPlanInput {
   visibility?: boolean;
   travelGroupId?: string; // optional
 }
+
+
+export interface ITravelPlanFilters {
+  destination?: string;
+  travelType?: "SOLO" | "FAMILY" | "FRIENDS";
+  startDate?: string;
+  endDate?: string;
+}

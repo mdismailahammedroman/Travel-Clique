@@ -1,17 +1,20 @@
-/* eslint-disable @typescript-eslint/no-unused-expressions */
+class AppError extends Error {
+  public statusCode: number;
+  public isOperational: boolean;
+  StatusCodes: number | undefined;
 
-class AppError extends Error{
-    StatusCode:number;
-    constructor(statusCode:number, message:string, stack=""){
-        super(message);
-        this.StatusCode=statusCode,
-        this.stack=stack|| this.stack;
-        if(stack ){
-            this.stack=stack;
+  constructor(statusCode: number, message: string, stack?: string) {
+    super(message);
 
-        }else{
-            Error.captureStackTrace(this,this.constructor)
-        }
+    this.statusCode = statusCode;
+    this.isOperational = true;
+
+    if (stack !== undefined) {
+      this.stack = stack;
+    } else {
+      Error.captureStackTrace(this, this.constructor);
     }
+  }
 }
+
 export default AppError;

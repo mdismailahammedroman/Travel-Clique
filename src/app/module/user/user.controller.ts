@@ -1,130 +1,158 @@
+import { userServices } from "./user.service";
 import { Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
-import STATUS_CODES from "http-status";
-import { userService } from "./user.service";
-import pick from "../../helpers/pick";
-import { IJWTPayload } from "../../helpers/payload";
-import AppError from "../../errorHelpers/AppError";
+import { JwtPayload } from "jsonwebtoken";
 
-// CREATE USER
-const createUser = catchAsync(async (req: Request, res: Response) => {
-  if (req.file) req.body.profileImage = req.file.path || req.file.filename;
-
-  const result = await userService.createUser(req.body);
-  sendResponse(res, {
-    success: true,
-    statusCode: STATUS_CODES.CREATED,
-    message: "User created successfully",
-    data: result,
-  });
-});
-
-// GET ALL USERS (ADMIN)
-const getUsers = catchAsync(async (req: Request, res: Response) => {
-  const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
-  const filters = pick(req.query, ["startDateTime", "endDateTime"]);
-
-  const users = await userService.getUsers(options, filters);
-
-  sendResponse(res, {
-    success: true,
-    statusCode: STATUS_CODES.OK,
-    message: "Users fetched successfully",
-    data: users.data,
-    meta:users.meta
-  });
-});
-
-
-// GET SINGLE USER
-const getUser = catchAsync(async (req: Request, res: Response) => {
-  const user = await userService.getUserById(req.params.id);
-  sendResponse(res, {
-    success: true,
-    statusCode: STATUS_CODES.OK,
-    message: "User fetched successfully",
-    data: user,
-  });
-});
-
-// UPDATE USER
-const updateUser = catchAsync(async (req: Request, res: Response) => {
-  const userId = req.user?.id; // ID from JWT token
-  if (!userId) throw new Error("User not found in request");
-
-  // Handle uploaded profile image
-  if (req.file) req.body.profileImage = req.file.path || req.file.filename;
-
-  const updatedUser = await userService.updateUser(userId, req.body);
-
-  sendResponse(res, {
-    success: true,
-    statusCode: STATUS_CODES.OK,
-    message: "Profile updated successfully",
-    data: updatedUser,
-  });
-});
-
-// UPDATE USER ROLE (Admin only)
-const updateUserRole = catchAsync(async (req: Request, res: Response) => {
-  const updatedUser = await userService.updateUserRole(req.params.id, req.body);
-  sendResponse(res, {
-    success: true,
-    statusCode: STATUS_CODES.OK,
-    message: "User role updated successfully",
-    data: updatedUser,
-  });
-});
-
-const getCurrentUser = catchAsync(async (req: Request, res: Response) => {
-
-
-  if (!req.user) {
-    throw new AppError(403, "User not authenticated");
-  }
-
-  const user = await userService.getCurrentUser(req.user as IJWTPayload);
+// =======================
+// REGISTER USER
+// =======================
+const registerUser = catchAsync(async (req: Request, res: Response) => {
+  const result = await userServices.createUser(req.body);
 
   sendResponse(res, {
     success: true,
     statusCode: 200,
-    message: "Current user fetched successfully",
-    data: user,
+    message: "User created successfully!",
+    data: result,
   });
 });
 
+// =======================
+// GET CURRENT LOGGED-IN USER
+// =======================
+const getMe = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+  const result = await userServices.getCurrentUser({ id: user.id });
 
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "User fetched successfully!",
+    data: result,
+  });
+});
 
+// =======================
+// GET ALL USERS (ADMIN)
+// =======================
+const getAllUsers = catchAsync(async (req: Request, res: Response) => {
+  const query = req.query as Record<string, string | undefined>;
+  const page = query.page || "1";
+  const limit = query.limit || "10";
 
+  const filters = {
+    searchTerm: query.searchTerm,
+    startDateTime: query.startDateTime,
+    endDateTime: query.endDateTime,
+  };
+
+  const result = await userServices.getUsers(
+    { page: Number(page), limit: Number(limit) },
+    filters
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Users fetched successfully!",
+    data: result,
+  });
+});
+
+// =======================
+// GET USER PROFILE BY ID
+// =======================
+const getProfile = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.params as JwtPayload;
+  const result = await userServices.getUserById(userId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "Profile fetched successfully!",
+    data: result,
+  });
+});
+
+// =======================
+// UPDATE USER PROFILE
+// =======================
+const userUpdate = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.params as JwtPayload;
+  const body = req.body;
+
+  const payload = {
+    ...body,
+    profileImage: req.file?.path, // if using file upload middleware
+  };
+
+  const result = await userServices.updateUser(userId, payload);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "User updated successfully!",
+    data: result,
+  });
+});
+
+// =======================
 // DELETE USER
-const deleteUser = catchAsync(async (req: Request, res: Response) => {
-  await userService.deleteUser(req.params.id);
+// =======================
+const userDelete = catchAsync(async (req: Request, res: Response) => {
+  const { userId } = req.params as JwtPayload;
+
+  const result = await userServices.deleteUser(userId);
+
   sendResponse(res, {
     success: true,
-    statusCode: STATUS_CODES.OK,
-    message: "User deleted successfully",
+    statusCode: 200,
+    message: "User deleted successfully!",
+    data: result,
   });
 });
 
-// BLOCK/UNBLOCK USER
+// BLOCK / UNBLOCK USER (Admin)
 const blockUser = catchAsync(async (req: Request, res: Response) => {
-  const user = await userService.blockUser(req.params.id, req.body.block);
+  const userId = req.params.id;
+  const { block } = req.body; // expects { block: true/false }
+
+  const result = await userServices.blockUser(userId as string, block);
+
   sendResponse(res, {
     success: true,
-    statusCode: STATUS_CODES.OK,
-    message: `User ${req.body.block ? "blocked" : "unblocked"} successfully`,
-    data: user,
+    statusCode: 200,
+    message: `User ${block ? "blocked" : "unblocked"} successfully!`,
+    data: result,
   });
 });
 
-export const userController = {
-  createUser,
-  getUsers,
-  getUser,
-  updateUser,
-  deleteUser,
+// UPDATE USER ROLE (Admin)
+const updateUserRole = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.params.id as string;
+  const { role } = req.body; // expects { role: "USER" | "MODERATOR" | ... }
+
+  const result = await userServices.updateUser(userId, { role });
+
+  sendResponse(res, {
+    success: true,
+    statusCode: 200,
+    message: "User role updated successfully!",
+    data: result,
+  });
+});
+
+// =======================
+// EXPORT ALL CONTROLLERS
+// =======================
+export const userControllers = {
+  registerUser,
+  getMe,
+  getAllUsers,
+  getProfile,
+  userUpdate,
+  userDelete,
   blockUser,
   updateUserRole,
-  getCurrentUser
 };

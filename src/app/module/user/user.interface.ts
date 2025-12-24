@@ -1,10 +1,12 @@
+import { Role } from "@prisma/client";
+
 export interface createUserInput {
   name: string;
   email: string;
   password: string;
   fullName?: string;
   profileImage?: string;
-  role?: "USER" | "MODERATOR" | "ADMIN";
+  role?: Role;
 }
 
 export interface updateUserInput {
@@ -13,9 +15,8 @@ export interface updateUserInput {
   bio?: string;
   currentLocation?: string;
   profileImage?: string;
-    role?: "USER" | "MODERATOR" | "ADMIN" | "SUPER_ADMIN";
+  role?: Role;
 }
-
 
 export interface updateProfileInput {
   fullName?: string;

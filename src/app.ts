@@ -4,7 +4,8 @@ import cookieParser from "cookie-parser";
 import { envVars } from "./app/config/envVars";
 import router from "./app/router";
 // ⚠️ Adjust path if needed
-import { subscriptionController } from "./app/module/Subscription/subscription.controller"; 
+import { subscriptionController } from "./app/module/Subscription/subscription.controller";
+import { globalErrorHandler } from "./app/middleware/golobalErrorHandler";
 
 const app: Application = express();
 
@@ -13,7 +14,7 @@ const app: Application = express();
  * Uses express.raw() to get the necessary raw body (Buffer) for signature verification.
  */
 app.post(
-  "/api/v1/subscriptions/webhook", 
+  "/api/v1/subscriptions/webhook",
   express.raw({ type: "application/json" }),
   subscriptionController.stripeWebhook
 );
@@ -34,7 +35,7 @@ app.use(
 app.get("/", (_req, res) => {
   res.send("API Working...");
 });
-
+app.use(globalErrorHandler);
 /**
  * ✅ API ROUTES
  */

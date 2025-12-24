@@ -4,7 +4,7 @@ import { catchAsync } from "../utils/catchAsync";
 import { sendResponse } from "../utils/sendResponse";
 import { OTPService } from "./otp.service";
 
-const sendOtpHandler = catchAsync(async (req:Request, res:Response) => {
+const sendOtpHandler = catchAsync(async (req: Request, res: Response) => {
   const { email } = req.body;
   await OTPService.sendOTP(email);
 
@@ -16,7 +16,7 @@ const sendOtpHandler = catchAsync(async (req:Request, res:Response) => {
   });
 });
 
-const verifyOtpHandler = catchAsync(async (req:Request, res:Response) => {
+const verifyOtpHandler = catchAsync(async (req: Request, res: Response) => {
   const { email, otp } = req.body;
   await OTPService.verifyOTP(email, otp);
 

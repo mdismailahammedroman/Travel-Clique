@@ -1,14 +1,25 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { prisma } from "../../utils/prisma";
 import bcrypt from "bcryptjs";
-import { envVars } from "../../config/envVars";
-import { createUserInput, updateUserInput } from "./user.interface";
+import { prisma } from "../../utils/prisma";
+import AppError from "../../errorHelpers/AppError";
+import { OTPService } from "../../otp/otp.service";
+import {
+  createUserInput,
+  updateProfileInput,
+  updateUserInput,
+} from "./user.interface";
 import { IOptions } from "../../helpers/paginationHelper";
-import { IJWTPayload } from "../../helpers/payload";
 
 // CREATE USER
 const createUser = async (data: createUserInput) => {
-  const hashedPassword = await bcrypt.hash(data.password, Number(envVars.SALT_ROUNDS));
+  const existingUser = await prisma.user.findUnique({
+    where: { email: data.email },
+  });
+
+  if (existingUser) throw new AppError(400, "Email already registered");
+
+  const hashedPassword = await bcrypt.hash(data.password, 10);
 
   const user = await prisma.user.create({
     data: {
@@ -16,15 +27,25 @@ const createUser = async (data: createUserInput) => {
       password: hashedPassword,
       name: data.name,
       role: data.role || "USER",
+      isVerified: false,
       profile: {
         create: {
           fullName: data.fullName || data.name,
-          profileImage: data.profileImage,
+          profileImage: data.profileImage || null,
         },
       },
     },
-    include: { profile: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      isVerified: true,
+      profile: true,
+    },
   });
+
+  await OTPService.sendOTP(data.email);
 
   return user;
 };
@@ -35,20 +56,23 @@ const getUsers = async (options: IOptions, filters: any) => {
   const limit = Number(options.limit) || 10;
   const skip = (page - 1) * limit;
 
- const where: any = {};
+  const where: any = {};
 
-// Example generic filter
-if (filters.startDateTime) where.createdAt = { gte: new Date(filters.startDateTime) };
-if (filters.endDateTime) where.createdAt = { ...where.createdAt, lte: new Date(filters.endDateTime) };
+  if (filters.startDateTime)
+    where.createdAt = { gte: new Date(filters.startDateTime) };
+  if (filters.endDateTime)
+    where.createdAt = {
+      ...where.createdAt,
+      lte: new Date(filters.endDateTime),
+    };
 
-// Add searchTerm functionality (e.g., by name or email)
-if (filters.searchTerm) {
-  where.OR = [
-    { name: { contains: filters.searchTerm, mode: "insensitive" } },
-    { email: { contains: filters.searchTerm, mode: "insensitive" } },
-  ];
-}
-  // Count total users for pagination
+  if (filters.searchTerm) {
+    where.OR = [
+      { name: { contains: filters.searchTerm, mode: "insensitive" } },
+      { email: { contains: filters.searchTerm, mode: "insensitive" } },
+    ];
+  }
+
   const total = await prisma.user.count({ where });
 
   const users = await prisma.user.findMany({
@@ -61,88 +85,85 @@ if (filters.searchTerm) {
       : { createdAt: "desc" },
   });
 
- return {
-  data: users,
-  meta: {
-    total,                      // total matching records
-    page,                       // current page
-    limit,                      // limit per page
-    totalPage: Math.ceil(total / limit), // total pages
-  },
+  return {
+    data: users,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPage: Math.ceil(total / limit),
+    },
+  };
 };
 
-};
-
-
-
-// GET SINGLE USER BY ID
+// GET USER BY ID
 const getUserById = async (id: string) => {
-  return prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { id },
     include: { profile: true },
   });
+  if (!user) throw new AppError(404, "User not found");
+  return user;
 };
 
 // UPDATE USER
+function removeUndefined<T extends object>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([_, v]) => v !== undefined)
+  ) as Partial<T>;
+}
+
 const updateUser = async (id: string, data: updateUserInput) => {
+  const profileData = removeUndefined({
+    fullName: data.fullName ?? data.name ?? null,
+    bio: data.bio ?? null,
+    currentLocation: data.currentLocation ?? null,
+    profileImage: data.profileImage ?? null,
+  });
+
+  const userData = removeUndefined({
+    name: data.name,
+  });
+
   return prisma.user.update({
     where: { id },
     data: {
-      name: data.name,
+      ...userData,
       profile: {
-        update: {
-          fullName: data.fullName,
-          bio: data.bio,
-          currentLocation: data.currentLocation,
-          profileImage: data.profileImage,
-        },
+        update: profileData,
       },
     },
     include: { profile: true },
   });
 };
 
-
-
-// updateUserRole
-const updateUserRole = async (id: string, data: updateUserInput) => {
-  return prisma.user.update({
-    where: { id },
-    data: { role: data.role },
-  });
-};
-
-// Service
-const getCurrentUser = async (payload: IJWTPayload) => {
- const user = await prisma.user.findUnique({
-  where: { id: payload.id },
-  include: { profile: true },
-});
-
-  return user;
-};
-
-
 // DELETE USER
 const deleteUser = async (id: string) => {
   return prisma.user.delete({ where: { id } });
 };
 
-// BLOCK/UNBLOCK USER (Admin)
+// BLOCK / UNBLOCK USER
 const blockUser = async (id: string, block: boolean) => {
   return prisma.user.update({
     where: { id },
-    data: { isVerified: !block }, // example logic
+    data: { isBlocked: block },
   });
 };
 
-export const userService = {
+// GET CURRENT USER
+const getCurrentUser = async (payload: { id: string }) => {
+  return prisma.user.findUnique({
+    where: { id: payload.id },
+    include: { profile: true },
+  });
+};
+
+export const userServices = {
   createUser,
   getUsers,
   getUserById,
   updateUser,
   deleteUser,
   blockUser,
-  updateUserRole,
-  getCurrentUser
+  getCurrentUser,
 };

@@ -4,12 +4,10 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../../utils/prisma";
 import AppError from "../../errorHelpers/AppError";
 import { OTPService } from "../../otp/otp.service";
-import {
-  createUserInput,
-  updateProfileInput,
-  updateUserInput,
-} from "./user.interface";
-import { IOptions } from "../../helpers/paginationHelper";
+import { createUserInput, updateUserInput } from "./user.interface";
+import { IOptions, paginationHelper } from "../../helpers/paginationHelper";
+import { Prisma } from "@prisma/client";
+import { userSearchableFields } from "./user.constants";
 
 // CREATE USER
 const createUser = async (data: createUserInput) => {
@@ -50,59 +48,96 @@ const createUser = async (data: createUserInput) => {
   return user;
 };
 
-// GET ALL USERS (ADMIN)
-const getUsers = async (options: IOptions, filters: any) => {
-  const page = Number(options.page) || 1;
-  const limit = Number(options.limit) || 10;
-  const skip = (page - 1) * limit;
+export interface UserFilters {
+  searchTerm?: string;
+  role?: string;
+  isVerified?: string;
+  isBlocked?: string;
+}
 
-  const where: any = {};
+const getUsers = async (filters: UserFilters, options: IOptions) => {
+  const { page, limit, skip, sortBy, sortOrder } =
+    paginationHelper.calculatePagination(options);
 
-  if (filters.startDateTime)
-    where.createdAt = { gte: new Date(filters.startDateTime) };
-  if (filters.endDateTime)
-    where.createdAt = {
-      ...where.createdAt,
-      lte: new Date(filters.endDateTime),
-    };
+  const { searchTerm, ...filterData } = filters;
 
-  if (filters.searchTerm) {
-    where.OR = [
-      { name: { contains: filters.searchTerm, mode: "insensitive" } },
-      { email: { contains: filters.searchTerm, mode: "insensitive" } },
-    ];
+  const andConditions: Prisma.UserWhereInput[] = [];
+
+  // SEARCH
+  if (searchTerm) {
+    andConditions.push({
+      OR: [
+        { email: { contains: searchTerm, mode: "insensitive" } },
+        { name: { contains: searchTerm, mode: "insensitive" } },
+        {
+          profile: { fullName: { contains: searchTerm, mode: "insensitive" } },
+        },
+      ],
+    });
   }
 
-  const total = await prisma.user.count({ where });
-
-  const users = await prisma.user.findMany({
-    where,
-    include: { profile: true },
-    skip,
-    take: limit,
-    orderBy: options.sortBy
-      ? { [options.sortBy]: options.sortOrder || "desc" }
-      : { createdAt: "desc" },
+  // FILTERS
+  Object.keys(filterData).forEach((key) => {
+    const value = (filterData as any)[key];
+    if (value !== undefined) {
+      if (key === "isVerified" || key === "isBlocked") {
+        andConditions.push({ [key]: value === "true" });
+      } else {
+        andConditions.push({ [key]: value });
+      }
+    }
   });
 
+  const where: Prisma.UserWhereInput =
+    andConditions.length > 0 ? { AND: andConditions } : {};
+
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { [sortBy]: sortOrder },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isVerified: true,
+        isBlocked: true,
+        createdAt: true,
+        profile: {
+          select: {
+            fullName: true,
+            profileImage: true,
+            bio: true,
+            currentLocation: true,
+          },
+        },
+      },
+    }),
+    prisma.user.count({ where }),
+  ]);
+
   return {
-    data: users,
-    meta: {
-      total,
+    users,
+    pagination: {
       page,
       limit,
-      totalPage: Math.ceil(total / limit),
+      total,
+      pages: Math.ceil(total / limit),
     },
   };
 };
 
 // GET USER BY ID
-const getUserById = async (id: string) => {
+const getProfile = async (targetUserId: string) => {
   const user = await prisma.user.findUnique({
-    where: { id },
+    where: { id: targetUserId },
     include: { profile: true },
   });
+
   if (!user) throw new AppError(404, "User not found");
+
   return user;
 };
 
@@ -161,7 +196,7 @@ const getCurrentUser = async (payload: { id: string }) => {
 export const userServices = {
   createUser,
   getUsers,
-  getUserById,
+  getProfile,
   updateUser,
   deleteUser,
   blockUser,

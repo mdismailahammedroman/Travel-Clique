@@ -6,7 +6,7 @@ import { sendEmail } from "../utils/sendEmail";
 
 const OTP_EXPIRATION = 2 * 60; // 2 minutes
 
-const generateOtp = (length = 6) => {
+export const generateOtp = (length = 6) => {
   return crypto.randomInt(10 ** (length - 1), 10 ** length).toString();
 };
 
@@ -23,7 +23,7 @@ const sendOTP = async (email: string) => {
 
   const html = `
     <h1>Email Verification</h1>
-    <p>Hello ${user.fullName},</p>
+    <p>Hello ${user.name},</p>
     <p>Your OTP code is: <strong>${otp}</strong></p>
     <p>This code will expire in 2 minutes.</p>
   `;

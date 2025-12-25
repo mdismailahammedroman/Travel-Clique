@@ -37,7 +37,7 @@ router.patch(
 // =======================
 
 // Get all users
-router.get("/", checkAuth(Role.ADMIN), userControllers.getAllUsers);
+router.get("/", checkAuth(Role.USER), userControllers.getAllUsers);
 
 // Get user by ID
 router.get("/:id", checkAuth(Role.ADMIN), userControllers.getProfile);

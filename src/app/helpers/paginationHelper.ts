@@ -1,35 +1,36 @@
 export interface IOptions {
-    page?: string | number;
-    limit?: string | number;
-    sortBy?: string;
-    sortOrder?: string;
+  page?: string | number;
+  limit?: string | number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
 }
 
 interface IOptionsResult {
-    page: number;
-    limit: number;
-    skip: number;
-    sortBy: string;
-    sortOrder: string;
+  page: number;
+  limit: number;
+  skip: number;
+  sortBy: string;
+  sortOrder: "asc" | "desc";
 }
 
 const calculatePagination = (options: IOptions): IOptionsResult => {
-    const page: number = Number(options.page) || 1;
-    const limit: number = Number(options.limit) || 10;
-    const skip: number = (Number(page) - 1) * limit;
+  const page = Number(options.page) > 0 ? Number(options.page) : 1;
+  const limit = Number(options.limit) > 0 ? Number(options.limit) : 10;
 
-    const sortBy: string = options.sortBy || "createdAt";
-    const sortOrder: string = options.sortOrder || "desc";
+  const skip = (page - 1) * limit;
 
-    return {
-        page,
-        limit,
-        skip,
-        sortBy,
-        sortOrder
-    }
-}
+  const sortBy = options.sortBy ?? "createdAt";
+  const sortOrder = options.sortOrder ?? "desc";
+
+  return {
+    page,
+    limit,
+    skip,
+    sortBy,
+    sortOrder,
+  };
+};
 
 export const paginationHelper = {
-    calculatePagination
-}
+  calculatePagination,
+};

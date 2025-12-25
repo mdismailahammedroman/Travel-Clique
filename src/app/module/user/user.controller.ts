@@ -1,8 +1,19 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { userServices } from "./user.service";
 import { Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { JwtPayload } from "jsonwebtoken";
+import { userFilterableFields } from "./user.constants";
+import AppError from "../../errorHelpers/AppError";
+
+const pick = (obj: Record<string, any>, keys: string[]) => {
+  const result: Record<string, any> = {};
+  keys.forEach((key) => {
+    if (key in obj) result[key] = obj[key];
+  });
+  return result;
+};
 
 // =======================
 // REGISTER USER
@@ -37,20 +48,12 @@ const getMe = catchAsync(async (req: Request, res: Response) => {
 // GET ALL USERS (ADMIN)
 // =======================
 const getAllUsers = catchAsync(async (req: Request, res: Response) => {
-  const query = req.query as Record<string, string | undefined>;
-  const page = query.page || "1";
-  const limit = query.limit || "10";
+  const query = { ...req.query } as Record<string, any>;
 
-  const filters = {
-    searchTerm: query.searchTerm,
-    startDateTime: query.startDateTime,
-    endDateTime: query.endDateTime,
-  };
+  const filters = pick(query, userFilterableFields); // searching , filtering
+  const options = pick(query, ["page", "limit", "sortBy", "sortOrder"]); // pagination and sorting
 
-  const result = await userServices.getUsers(
-    { page: Number(page), limit: Number(limit) },
-    filters
-  );
+  const result = await userServices.getUsers(filters, options);
 
   sendResponse(res, {
     success: true,
@@ -59,13 +62,16 @@ const getAllUsers = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
-
 // =======================
 // GET USER PROFILE BY ID
 // =======================
 const getProfile = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.params as JwtPayload;
-  const result = await userServices.getUserById(userId);
+  const targetUserId = req.params.id; // the user ID in the URL
+
+  if (!targetUserId) {
+    throw new AppError(400, "User ID is required");
+  }
+  const result = await userServices.getProfile(targetUserId);
 
   sendResponse(res, {
     success: true,

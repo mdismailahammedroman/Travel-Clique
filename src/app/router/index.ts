@@ -2,9 +2,9 @@ import express from "express";
 // import { userRouter } from "../module/user/user.router"
 import { authRoute } from "../module/auth/auth.route";
 import { userRouter } from "../module/user/user.router";
-// import { otpRoutes } from "../otp/otp.router"
-// import { travelPlanRoute } from "../module/TravelPlan/travelPlan.route"
-// import { profileRouter } from "../module/Profile/profile.route"
+import { otpRoutes } from "../otp/otp.router";
+import { travelPlanRoute } from "../module/TravelPlan/travelPlan.route";
+import { profileRouter } from "../module/Profile/profile.route";
 // import { travelGroupRouter } from "../module/travelGroup/travelGroup.route"
 // import { matchRouter } from "../module/matchingUser/matchingUser.route"
 // import { subscriptionRoute } from "../module/Subscription/subscription.routes"
@@ -20,20 +20,20 @@ const RouterModule = [
     path: "/auth",
     route: authRoute,
   },
+  {
+    path: "/otp",
+    route: otpRoutes,
+  },
+  {
+    path: "/profiles",
+    route: profileRouter,
+  },
+  {
+    path: "/travel-plan",
+    route: travelPlanRoute,
+  },
   // {
-  //   path:"/otp",
-  //   route:otpRoutes,
-  // } ,
-  // {
-  //   path:"/profiles",
-  //   route:profileRouter,
-  // } ,
-  // {
-  //   path:"/travelplan",
-  //   route:travelPlanRoute,
-  // } ,
-  // {
-  //   path:"/travelgroup",
+  //   path:"/travel-group",
   //   route:travelGroupRouter,
   // } ,
   // {

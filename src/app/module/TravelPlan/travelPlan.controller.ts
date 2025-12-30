@@ -1,28 +1,21 @@
 import httpStatus from "http-status-codes";
+import { Request, Response } from "express";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
-import { travelPlanService } from "./travelPlan.service";
-import { Request, Response } from "express";
 import AppError from "../../errorHelpers/AppError";
-import pick from "../../helpers/pick";
+import { travelPlanService } from "./travelPlan.service";
 
 /**
  * CREATE PLAN
  */
 const createTravelPlan = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?.id;
-  if (!userId) throw new AppError(401, "User not authenticated");
 
-  const result = await travelPlanService.createTravelPlan(userId, req.body);
-
-  if ("checkoutUrl" in result) {
-    return sendResponse(res, {
-      success: false,
-      statusCode: 402,
-      message: result.message,
-      data: { checkoutUrl: result.checkoutUrl },
-    });
+  if (!userId) {
+    throw new AppError(401, "User not authenticated");
   }
+
+  const result = await travelPlanService.createTravelPlan(req.body, userId);
 
   sendResponse(res, {
     success: true,
@@ -32,48 +25,38 @@ const createTravelPlan = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-/**
- * PUBLIC PLANS
- */
-const getPublicPlans = catchAsync(async (req: Request, res: Response) => {
-  const options = pick(req.query, ["page", "limit"]);
-  const filters = pick(req.query, [
-    "destination",
-    "travelType",
-    "startDate",
-    "endDate",
-  ]);
+// /**
+//  * GET PUBLIC PLANS
+//  */
+// const getPublicPlans = catchAsync(async (_req, res) => {
+//   const result = await travelPlanService.getPublicPlans();
 
-  const result = await travelPlanService.getPublicPlans(options, filters);
+//   sendResponse(res, {
+//     success: true,
+//     statusCode: httpStatus.OK,
+//     message: "Public travel plans fetched",
+//     data: result,
+//   });
+// });
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: "Public travel plans retrieved",
-    data: result,
-  });
-});
+// /**
+//  * GET SINGLE PLAN
+//  */
+// const getPlanById = catchAsync(async (req, res) => {
+//   const { id } = req.params;
 
-/**
- * GET BY ID
- */
-const getPlanById = catchAsync(async (req: Request, res: Response) => {
-  const result = await travelPlanService.getPlanById(req.params.id);
+//   const result = await travelPlanService.getPlanById(id);
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: "Travel plan retrieved",
-    data: result,
-  });
-});
-
-/**
- * MY PLANS
- */
+//   sendResponse(res, {
+//     success: true,
+//     statusCode: httpStatus.OK,
+//     message: "Travel plan fetched successfully",
+//     data: result,
+//   });
+// });
 
 export const TravelPlanController = {
   createTravelPlan,
-  getPublicPlans,
-  getPlanById,
+  // getPublicPlans,
+  // getPlanById,
 };

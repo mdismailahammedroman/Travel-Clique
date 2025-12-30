@@ -1,33 +1,52 @@
 export type TravelType = "SOLO" | "FAMILY" | "FRIENDS";
 
-export interface createTravelPlanInput {
+export interface CreateTravelPlanInput {
+  userId: string;
   destination: string;
-  startDate: Date | string;
-  endDate: Date | string;
+  country: string;
+  city?: string;
+  startDate: Date;
+  endDate: Date;
   budgetMin?: number;
   budgetMax?: number;
   travelType: TravelType;
   description?: string;
-  visibility?: boolean;
-  travelGroupId?: string; // optional
+  itinerary?: string;
+  interests?: string[];
 }
 
-export interface updateTravelPlanInput {
+export interface UpdateTravelPlanInput {
   destination?: string;
-  startDate?: Date | string;
-  endDate?: Date | string;
+  country?: string;
+  city?: string;
+  startDate?: Date;
+  endDate?: Date;
   budgetMin?: number;
   budgetMax?: number;
   travelType?: TravelType;
   description?: string;
-  visibility?: boolean;
-  travelGroupId?: string; // optional
+  itinerary?: string;
+  interests?: string[];
+  isActive?: boolean;
 }
 
-
-export interface ITravelPlanFilters {
+export interface SearchTravelPlanFilters {
   destination?: string;
-  travelType?: "SOLO" | "FAMILY" | "FRIENDS";
-  startDate?: string;
-  endDate?: string;
+  country?: string;
+  city?: string;
+  startDate?: Date;
+  endDate?: Date;
+  minBudget?: number;
+  maxBudget?: number;
+  travelType?: TravelType;
+  interests?: string[];
+  userId?: string;
+  isActive?: boolean;
+}
+
+export interface PaginationOptions {
+  page: number;
+  limit: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
 }

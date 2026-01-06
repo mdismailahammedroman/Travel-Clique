@@ -5,17 +5,35 @@ import { matchingUserController } from "./matchingUser.controller";
 
 const router = Router();
 
-// Apply authentication middleware to all routes in this router
-router.use(checkAuth(...Object.values(Role)));
+// All routes require authentication
+const auth = checkAuth(Role.USER);
 
-// Match routes
-router.post("/send", matchingUserController.sendMatch);
-router.post("/respond", matchingUserController.respondMatch);
-router.get("/sent", matchingUserController.getSentMatches);
-router.get("/received", matchingUserController.getReceivedMatches);
-router.get("/:id", matchingUserController.getMatchById);
-router.delete("/:id/cancel", matchingUserController.cancelMatchRequest);
-router.get("/stats", matchingUserController.getMatchStats);
-router.get("/matched-users", matchingUserController.getMatchedUsers);
+/**
+ * MATCH REQUEST ROUTES
+ */
 
-export const matchRouter = router;
+// Send match request
+router.post("/", auth, matchingUserController.sendMatch);
+
+// Get sent match requests
+router.get("/sent", auth, matchingUserController.getSentMatches);
+
+// Get received match requests
+router.get("/received", auth, matchingUserController.getReceivedMatches);
+
+// Get match statistics
+router.get("/stats", auth, matchingUserController.getMatchStats);
+
+// Get matched users (accepted connections)
+router.get("/connections", auth, matchingUserController.getMatchedUsers);
+
+// Get specific match by ID
+router.get("/:id", auth, matchingUserController.getMatchById);
+
+// Respond to match request (accept/decline)
+router.patch("/:id/respond", auth, matchingUserController.respondMatch);
+
+// Cancel match request
+router.delete("/:id", auth, matchingUserController.cancelMatchRequest);
+
+export const matchRoute = router;

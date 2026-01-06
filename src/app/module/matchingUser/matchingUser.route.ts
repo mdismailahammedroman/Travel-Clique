@@ -5,22 +5,17 @@ import { matchingUserController } from "./matchingUser.controller";
 
 const router = Router();
 
-router.post("/", checkAuth(...Object.values(Role)), matchingUserController.sendMatch);
-router.patch(
-  "/",
-  checkAuth(...Object.values(Role)),
-  matchingUserController.updateMatchStatus
-);
-router.get(
-  "/sent",
-  checkAuth(...Object.values(Role)),
-  matchingUserController.getSentMatches
-);
+// Apply authentication middleware to all routes in this router
+router.use(checkAuth(...Object.values(Role)));
 
-// Get received matches with optional filters, sorting, pagination
-router.get(
-  "/received",
-  checkAuth(...Object.values(Role)),
-  matchingUserController.getReceivedMatches
-);
+// Match routes
+router.post("/send", matchingUserController.sendMatch);
+router.post("/respond", matchingUserController.respondMatch);
+router.get("/sent", matchingUserController.getSentMatches);
+router.get("/received", matchingUserController.getReceivedMatches);
+router.get("/:id", matchingUserController.getMatchById);
+router.delete("/:id/cancel", matchingUserController.cancelMatchRequest);
+router.get("/stats", matchingUserController.getMatchStats);
+router.get("/matched-users", matchingUserController.getMatchedUsers);
+
 export const matchRouter = router;

@@ -16,6 +16,7 @@ export interface CreateTravelPlanInput {
 }
 
 export interface UpdateTravelPlanInput {
+  fullName?: string;
   destination?: string;
   country?: string;
   city?: string;

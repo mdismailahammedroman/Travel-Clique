@@ -19,7 +19,11 @@ const pick = (obj: Record<string, any>, keys: string[]) => {
 // REGISTER USER
 // =======================
 const registerUser = catchAsync(async (req: Request, res: Response) => {
-  const result = await userServices.createUser(req.body);
+  const payload = {
+    ...req.body,
+    profileImage: req.file?.path, // Cloudinary URL
+  };
+  const result = await userServices.createUser(payload);
 
   sendResponse(res, {
     success: true,

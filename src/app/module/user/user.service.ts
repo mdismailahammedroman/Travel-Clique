@@ -7,9 +7,8 @@ import { OTPService } from "../../otp/otp.service";
 import { createUserInput, updateUserInput } from "./user.interface";
 import { IOptions, paginationHelper } from "../../helpers/paginationHelper";
 import { Prisma } from "@prisma/client";
-import { userSearchableFields } from "./user.constants";
 
-// CREATE USER
+// CR
 const createUser = async (data: createUserInput) => {
   const existingUser = await prisma.user.findUnique({
     where: { email: data.email },

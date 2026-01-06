@@ -136,13 +136,17 @@ model TravelPlan {
   endDate     DateTime
   budgetMin   Float?
   budgetMax   Float?
+  matches     Match[]
+  viewCount   Int        @default(0)
   travelType  TravelType
   description String?
   visibility  Boolean    @default(true)
-  itinerary   String?
-  interests   String[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  isActive    Boolean    @default(true) // ← add this
+
+  itinerary String?
+  interests String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // =======================
@@ -180,8 +184,10 @@ model Match {
 
   status MatchStatus @default(PENDING)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  travelPlan   TravelPlan? @relation(fields: [travelPlanId], references: [id])
+  travelPlanId String?
 
   @@unique([senderId, receiverId])
 }

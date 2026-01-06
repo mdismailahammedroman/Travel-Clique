@@ -5,15 +5,32 @@ import { Role } from "@prisma/client";
 
 const router = Router();
 
-// Only users with active subscriptions can create plans
-router.post(
-  "/create-travelplan",
-  checkAuth(...Object.values(Role)),
-  TravelPlanController.createTravelPlan
+// PUBLIC
+router.get("/search", TravelPlanController.searchPlan);
+
+router.get("/popular", TravelPlanController.getPopularPlans);
+router.get("/upcoming", TravelPlanController.getUpcomingPlans);
+router.get("/:id", TravelPlanController.getTravelPlanById);
+
+// AUTHENTICATED USER
+router.post("/", checkAuth(Role.USER), TravelPlanController.createTravelPlan);
+
+router.get(
+  "/my",
+  checkAuth(Role.USER),
+  TravelPlanController.getUserTravelPlans
 );
 
-// router.get("/", TravelPlanController.getPublicPlans);
-// router.get("/my", checkAuth(Role.USER), TravelPlanController.getMyPlans);
-// router.get("/:id", TravelPlanController.getPlanById);
+router.patch(
+  "/:id",
+  checkAuth(Role.USER),
+  TravelPlanController.updateTravelPlan
+);
+
+router.delete(
+  "/:id",
+  checkAuth(Role.USER),
+  TravelPlanController.deleteTravelPlan
+);
 
 export const travelPlanRoute = router;

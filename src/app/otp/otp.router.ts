@@ -1,10 +1,9 @@
-
 import { Router } from "express";
 import { otpController } from "./otp.controller";
 
+const router = Router();
 
-const router=Router()
-router.post("/sendotp", otpController.sendOtpHandler)
-router.post("/verifyotp", otpController.verifyOtpHandler)
+router.post("/send-otp", otpController.sendOtpHandler);
+router.post("/verify-otp", otpController.verifyOtpHandler);
 
-export const otpRoutes=router
+export const otpRoutes = router;

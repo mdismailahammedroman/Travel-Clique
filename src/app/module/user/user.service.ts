@@ -1,14 +1,22 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { prisma } from "../../utils/prisma";
 import bcrypt from "bcryptjs";
-import { envVars } from "../../config/envVars";
+import { prisma } from "../../utils/prisma";
+import AppError from "../../errorHelpers/AppError";
+import { OTPService } from "../../otp/otp.service";
 import { createUserInput, updateUserInput } from "./user.interface";
-import { IOptions } from "../../helpers/paginationHelper";
-import { IJWTPayload } from "../../helpers/payload";
+import { IOptions, paginationHelper } from "../../helpers/paginationHelper";
+import { Prisma } from "@prisma/client";
 
-// CREATE USER
+// CR
 const createUser = async (data: createUserInput) => {
-  const hashedPassword = await bcrypt.hash(data.password, Number(envVars.SALT_ROUNDS));
+  const existingUser = await prisma.user.findUnique({
+    where: { email: data.email },
+  });
+
+  if (existingUser) throw new AppError(400, "Email already registered");
+
+  const hashedPassword = await bcrypt.hash(data.password, 10);
 
   const user = await prisma.user.create({
     data: {
@@ -16,133 +24,180 @@ const createUser = async (data: createUserInput) => {
       password: hashedPassword,
       name: data.name,
       role: data.role || "USER",
+      isVerified: false,
       profile: {
         create: {
           fullName: data.fullName || data.name,
-          profileImage: data.profileImage,
+          profileImage: data.profileImage || null,
         },
       },
     },
-    include: { profile: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      isVerified: true,
+      profile: true,
+    },
   });
+
+  await OTPService.sendOTP(data.email);
 
   return user;
 };
 
-// GET ALL USERS (ADMIN)
-const getUsers = async (options: IOptions, filters: any) => {
-  const page = Number(options.page) || 1;
-  const limit = Number(options.limit) || 10;
-  const skip = (page - 1) * limit;
-
- const where: any = {};
-
-// Example generic filter
-if (filters.startDateTime) where.createdAt = { gte: new Date(filters.startDateTime) };
-if (filters.endDateTime) where.createdAt = { ...where.createdAt, lte: new Date(filters.endDateTime) };
-
-// Add searchTerm functionality (e.g., by name or email)
-if (filters.searchTerm) {
-  where.OR = [
-    { name: { contains: filters.searchTerm, mode: "insensitive" } },
-    { email: { contains: filters.searchTerm, mode: "insensitive" } },
-  ];
+export interface UserFilters {
+  searchTerm?: string;
+  role?: string;
+  isVerified?: string;
+  isBlocked?: string;
 }
-  // Count total users for pagination
-  const total = await prisma.user.count({ where });
 
-  const users = await prisma.user.findMany({
-    where,
-    include: { profile: true },
-    skip,
-    take: limit,
-    orderBy: options.sortBy
-      ? { [options.sortBy]: options.sortOrder || "desc" }
-      : { createdAt: "desc" },
+const getUsers = async (filters: UserFilters, options: IOptions) => {
+  const { page, limit, skip, sortBy, sortOrder } =
+    paginationHelper.calculatePagination(options);
+
+  const { searchTerm, ...filterData } = filters;
+
+  const andConditions: Prisma.UserWhereInput[] = [];
+
+  // SEARCH
+  if (searchTerm) {
+    andConditions.push({
+      OR: [
+        { email: { contains: searchTerm, mode: "insensitive" } },
+        { name: { contains: searchTerm, mode: "insensitive" } },
+        {
+          profile: { fullName: { contains: searchTerm, mode: "insensitive" } },
+        },
+      ],
+    });
+  }
+
+  // FILTERS
+  Object.keys(filterData).forEach((key) => {
+    const value = (filterData as any)[key];
+    if (value !== undefined) {
+      if (key === "isVerified" || key === "isBlocked") {
+        andConditions.push({ [key]: value === "true" });
+      } else {
+        andConditions.push({ [key]: value });
+      }
+    }
   });
 
- return {
-  data: users,
-  meta: {
-    total,                      // total matching records
-    page,                       // current page
-    limit,                      // limit per page
-    totalPage: Math.ceil(total / limit), // total pages
-  },
+  const where: Prisma.UserWhereInput =
+    andConditions.length > 0 ? { AND: andConditions } : {};
+
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { [sortBy]: sortOrder },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isVerified: true,
+        isBlocked: true,
+        createdAt: true,
+        profile: {
+          select: {
+            fullName: true,
+            profileImage: true,
+            bio: true,
+            currentLocation: true,
+          },
+        },
+      },
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  return {
+    users,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+  };
 };
 
-};
-
-
-
-// GET SINGLE USER BY ID
-const getUserById = async (id: string) => {
-  return prisma.user.findUnique({
-    where: { id },
+// GET USER BY ID
+const getProfile = async (targetUserId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: targetUserId },
     include: { profile: true },
   });
+
+  if (!user) throw new AppError(404, "User not found");
+
+  return user;
 };
 
 // UPDATE USER
+function removeUndefined<T extends object>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([_, v]) => v !== undefined)
+  ) as Partial<T>;
+}
+
 const updateUser = async (id: string, data: updateUserInput) => {
+  const profileData = removeUndefined({
+    fullName: data.fullName ?? data.name ?? null,
+    bio: data.bio ?? null,
+    currentLocation: data.currentLocation ?? null,
+    profileImage: data.profileImage ?? null,
+  });
+
+  const userData = removeUndefined({
+    name: data.name,
+  });
+
   return prisma.user.update({
     where: { id },
     data: {
-      name: data.name,
+      ...userData,
       profile: {
-        update: {
-          fullName: data.fullName,
-          bio: data.bio,
-          currentLocation: data.currentLocation,
-          profileImage: data.profileImage,
-        },
+        update: profileData,
       },
     },
     include: { profile: true },
   });
 };
-
-
-
-// updateUserRole
-const updateUserRole = async (id: string, data: updateUserInput) => {
-  return prisma.user.update({
-    where: { id },
-    data: { role: data.role },
-  });
-};
-
-// Service
-const getCurrentUser = async (payload: IJWTPayload) => {
- const user = await prisma.user.findUnique({
-  where: { id: payload.id },
-  include: { profile: true },
-});
-
-  return user;
-};
-
 
 // DELETE USER
 const deleteUser = async (id: string) => {
   return prisma.user.delete({ where: { id } });
 };
 
-// BLOCK/UNBLOCK USER (Admin)
+// BLOCK / UNBLOCK USER
 const blockUser = async (id: string, block: boolean) => {
   return prisma.user.update({
     where: { id },
-    data: { isVerified: !block }, // example logic
+    data: { isBlocked: block },
   });
 };
 
-export const userService = {
+// GET CURRENT USER
+const getCurrentUser = async (payload: { id: string }) => {
+  return prisma.user.findUnique({
+    where: { id: payload.id },
+    include: { profile: true },
+  });
+};
+
+export const userServices = {
   createUser,
   getUsers,
-  getUserById,
+  getProfile,
   updateUser,
   deleteUser,
   blockUser,
-  updateUserRole,
-  getCurrentUser
+  getCurrentUser,
 };

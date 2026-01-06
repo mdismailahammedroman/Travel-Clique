@@ -4,7 +4,7 @@ dotenv.config(); // Load env variables first
 import { Server } from "node:http";
 import { envVars } from "./app/config/envVars";
 import app from "./app";
-import seedSuperAdmin from "./app/utils/seedSuperAdmin";
+// import seedSuperAdmin from "./app/utils/seedSuperAdmin";
 import { connectRedish } from "./app/config/redis.config";
 
 let server: Server;
@@ -21,8 +21,8 @@ async function startServer() {
 }
 
 (async () => {
-  await seedSuperAdmin();
-   await connectRedish() // Ensure super admin exists first
+  // await seedSuperAdmin();
+  await connectRedish(); // Ensure super admin exists first
   await startServer();
 })();
 

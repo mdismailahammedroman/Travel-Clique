@@ -1,81 +1,160 @@
 import { Request, Response } from "express";
+
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
-import  STATUS_CODES  from "http-status";
-
-import { matchService } from "./matchingUser.service";
 import { IJWTPayload } from "../../helpers/payload";
-import pick from "../../helpers/pick";
+import { matchService } from "./matchingUser.service";
+import { StatusCodes } from "http-status-codes";
 
-
-const sendMatch = catchAsync(async (req: Request, res: Response) => {
+export const sendMatch = catchAsync(async (req: Request, res: Response) => {
   const senderId = (req.user as IJWTPayload).id;
-  const { receiverId } = req.body;
+  const { receiverId, travelPlanId, message } = req.body;
 
-  const match = await matchService.sendMatch(senderId, receiverId);
+  const match = await matchService.sendMatchRequest({
+    senderId,
+    receiverId,
+    travelPlanId,
+    message,
+  });
 
   sendResponse(res, {
     success: true,
-    statusCode: STATUS_CODES.CREATED,
+    statusCode: StatusCodes.CREATED,
     message: "Match request sent",
     data: match,
   });
 });
 
-const updateMatchStatus = catchAsync(async (req: Request, res: Response) => {
-  const receiverId = (req.user as IJWTPayload).id;
+export const respondMatch = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req.user as IJWTPayload).id;
   const { matchId, status } = req.body;
 
-  const updated = await matchService.updateMatchStatus(
+  const updatedMatch = await matchService.respondToMatchRequest(
     matchId,
-    receiverId,
+    userId,
     status
   );
 
   sendResponse(res, {
     success: true,
-    statusCode: STATUS_CODES.OK,
-    message: "Match status updated",
-    data: updated,
+    statusCode: StatusCodes.OK,
+    message: "Match request updated",
+    data: updatedMatch,
   });
 });
 
+export const getSentMatches = catchAsync(
+  async (req: Request, res: Response) => {
+    const userId = (req.user as IJWTPayload).id;
+    const filters = req.query;
+    const options = {
+      page: Number(req.query.page) || 1,
+      limit: Number(req.query.limit) || 10,
+    };
 
-const getSentMatches = catchAsync(async (req, res) => {
+    const matches = await matchService.getSentMatches(userId, filters, options);
+
+    sendResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: "Sent matches fetched",
+      data: matches,
+    });
+  }
+);
+
+export const getReceivedMatches = catchAsync(
+  async (req: Request, res: Response) => {
+    const userId = (req.user as IJWTPayload).id;
+    const filters = req.query;
+    const options = {
+      page: Number(req.query.page) || 1,
+      limit: Number(req.query.limit) || 10,
+    };
+
+    const matches = await matchService.getReceivedMatches(
+      userId,
+      filters,
+      options
+    );
+
+    sendResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: "Received matches fetched",
+      data: matches,
+    });
+  }
+);
+
+export const getMatchById = catchAsync(async (req: Request, res: Response) => {
+  const userId = (req.user as IJWTPayload).id;
+  const { id } = req.params;
+
+  const match = await matchService.getMatchById(id as string, userId);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: "Match fetched",
+    data: match,
+  });
+});
+
+export const cancelMatchRequest = catchAsync(
+  async (req: Request, res: Response) => {
+    const userId = (req.user as IJWTPayload).id;
+    const { id } = req.params;
+
+    const result = await matchService.cancelMatchRequest(id as string, userId);
+
+    sendResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: result.message,
+    });
+  }
+);
+
+export const getMatchStats = catchAsync(async (req: Request, res: Response) => {
   const userId = (req.user as IJWTPayload).id;
 
-  const filters = pick(req.query, ["status"]);
-  const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
-
-  const result = await matchService.getSentMatches(userId, filters, options);
+  const stats = await matchService.getMatchStats(userId);
 
   sendResponse(res, {
-    statusCode:STATUS_CODES.OK,
     success: true,
-    message: "Sent matches fetched successfully",
-    data: result,
+    statusCode: StatusCodes.OK,
+    message: "Match stats fetched",
+    data: stats,
   });
 });
 
-const getReceivedMatches = catchAsync(async (req, res) => {
-  const userId =( req.user as IJWTPayload).id;
+export const getMatchedUsers = catchAsync(
+  async (req: Request, res: Response) => {
+    const userId = (req.user as IJWTPayload).id;
+    const options = {
+      page: Number(req.query.page) || 1,
+      limit: Number(req.query.limit) || 10,
+    };
 
-  const filters = pick(req.query, ["status"]);
-  const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
+    const matches = await matchService.getMatchedUsers(userId, options);
 
-  const result = await matchService.getReceivedMatches(userId, filters, options);
-
-  sendResponse(res, {
-     statusCode:STATUS_CODES.OK,
-    success: true,
-    message: "Received matches fetched successfully",
-    data: result,
-  });
-});
-
-  export const matchingUserController={
-    sendMatch,
-    updateMatchStatus,
-    getReceivedMatches,
-    getSentMatches,
+    sendResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: "Matched users fetched",
+      data: matches,
+    });
   }
+);
+
+export const matchingUserController = {
+  sendMatch,
+  getReceivedMatches,
+  getSentMatches,
+  respondMatch,
+  getMatchById,
+  cancelMatchRequest,
+  getMatchStats,
+  getMatchedUsers,
+};

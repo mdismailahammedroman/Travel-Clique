@@ -8,7 +8,10 @@ import { SubscriptionType, PaymentStatus } from "@prisma/client";
 import { stripe } from "../../helpers/stripe";
 
 // CREATE CHECKOUT SESSION
-const createCheckoutSession = async ({ userId, subscriptionType }: ICreateCheckoutSession) => {
+const createCheckoutSession = async ({
+  userId,
+  subscriptionType,
+}: ICreateCheckoutSession) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new AppError(404, "User not found");
 
@@ -36,7 +39,6 @@ const createCheckoutSession = async ({ userId, subscriptionType }: ICreateChecko
     url: session.url,
   };
 };
-
 
 // STRIPE WEBHOOK
 const stripeWebhook = async (event: Stripe.Event) => {

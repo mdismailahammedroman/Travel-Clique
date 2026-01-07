@@ -13,7 +13,7 @@ const createReview = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload | undefined;
   if (!user?.id) throw new AppError(401, "User not authenticated");
 
-  const reviewerId = user.id;
+  const { reviewerId } = user;
   const { reviewedId, rating, comment } = req.body;
 
   if (!reviewedId) throw new AppError(400, "Reviewed user ID is required");

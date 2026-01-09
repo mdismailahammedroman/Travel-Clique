@@ -66,7 +66,6 @@ model User {
   profile     Profile?
   travelPlans TravelPlan[]
 
-  // <-- fix relation names
   reviewsGiven    Review[] @relation("reviewsGiven")
   reviewsReceived Review[] @relation("reviewsReceived")
 
@@ -76,8 +75,8 @@ model User {
   subscriptions Subscription[]
   payments      Payment[]
 
-  groups  Group[]
-  members GroupMember[]
+  groups  Group[] // Groups the user belongs to
+  members GroupMember[] // Groups the user is a member of
 
   isBlocked Boolean @default(false)
 
@@ -106,6 +105,7 @@ model Profile {
   updatedAt DateTime @updatedAt
 }
 
+// Travel interests and visited countries
 model TravelInterest {
   id        String  @id @default(cuid())
   profileId String
@@ -130,6 +130,9 @@ model TravelPlan {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
+  groupId String
+  group   Group  @relation(fields: [groupId], references: [id])
+
   destination String
   country     String?
   city        String?
@@ -143,10 +146,10 @@ model TravelPlan {
   travelType  TravelType
   description String?
   visibility  Boolean    @default(true)
-  isActive    Boolean    @default(true) // ← add this
+  isActive    Boolean? // Optional `isActive` field for TravelPlan
+  itinerary   String?
+  interests   String[]
 
-  itinerary String?
-  interests String[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -241,17 +244,19 @@ model Payment {
 // GROUPS
 // =======================
 model Group {
-  id          String  @id @default(uuid())
+  id          String       @id @default(uuid())
   name        String
   description String?
   destination String
+  coverImage  String
+  createdBy   String
+  creator     User         @relation(fields: [createdBy], references: [id])
+  travelPlans TravelPlan[] // One-to-many relationship with TravelPlan
 
-  createdBy String
-  creator   User   @relation(fields: [createdBy], references: [id])
-
-  members GroupMember[]
-
-  createdAt DateTime @default(now())
+  members    GroupMember[]
+  maxMembers Int?
+  isActive   Boolean? // This is optional, so it can be `null` or `true/false`
+  createdAt  DateTime      @default(now())
 }
 
 model GroupMember {

@@ -6,14 +6,7 @@ import { sendResponse } from "../../utils/sendResponse";
 import { JwtPayload } from "jsonwebtoken";
 import { userFilterableFields } from "./user.constants";
 import AppError from "../../errorHelpers/AppError";
-
-const pick = (obj: Record<string, any>, keys: string[]) => {
-  const result: Record<string, any> = {};
-  keys.forEach((key) => {
-    if (key in obj) result[key] = obj[key];
-  });
-  return result;
-};
+import pick from "../../helpers/pick";
 
 // =======================
 // REGISTER USER

@@ -7,6 +7,7 @@ import { profileRouter } from "../module/Profile/profile.route";
 import { matchRoute } from "../module/matchingUser/matchingUser.route";
 import { groupRoute } from "../module/travelGroup/travelGroup.route";
 import { subscriptionRoute } from "../module/Subscription/subscription.routes";
+import { adminRoute } from "../module/admin/admin.route";
 
 const router = express.Router();
 const RouterModule = [
@@ -42,6 +43,10 @@ const RouterModule = [
   {
     path: "/subscription",
     route: subscriptionRoute,
+  },
+  {
+    path: "/admin",
+    route: adminRoute,
   },
 ];
 

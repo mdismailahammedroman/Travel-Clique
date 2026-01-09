@@ -5,8 +5,8 @@ import { otpRoutes } from "../otp/otp.router";
 import { travelPlanRoute } from "../module/TravelPlan/travelPlan.route";
 import { profileRouter } from "../module/Profile/profile.route";
 import { matchRoute } from "../module/matchingUser/matchingUser.route";
-// import { travelGroupRouter } from "../module/travelGroup/travelGroup.route"
-// import { subscriptionRoute } from "../module/Subscription/subscription.routes"
+import { groupRoute } from "../module/travelGroup/travelGroup.route";
+import { subscriptionRoute } from "../module/Subscription/subscription.routes";
 
 const router = express.Router();
 const RouterModule = [
@@ -31,18 +31,18 @@ const RouterModule = [
     path: "/travel-plan",
     route: travelPlanRoute,
   },
-  // {
-  //   path:"/travel-group",
-  //   route:travelGroupRouter,
-  // } ,
+  {
+    path: "/travel-group",
+    route: groupRoute,
+  },
   {
     path: "/match",
     route: matchRoute,
   },
-  // {
-  //   path:"/subscription",
-  //   route:subscriptionRoute,
-  // } ,
+  {
+    path: "/subscription",
+    route: subscriptionRoute,
+  },
 ];
 
 RouterModule.forEach((routers) => {

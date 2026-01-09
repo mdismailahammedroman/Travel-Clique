@@ -12,6 +12,22 @@ generator client {
 // =======================
 // ENUMS
 // =======================
+
+enum NotificationType {
+  MATCH_REQUEST
+  MATCH_ACCEPTED
+  MATCH_DECLINED
+  REVIEW_RECEIVED
+  GROUP_INVITATION
+  GROUP_MEMBER_JOINED
+  GROUP_MEMBER_LEFT
+  SUBSCRIPTION_EXPIRING
+  SUBSCRIPTION_EXPIRED
+  PAYMENT_SUCCESS
+  PAYMENT_FAILED
+  SYSTEM_ANNOUNCEMENT
+}
+
 enum Role {
   USER
   MODERATOR
@@ -59,12 +75,12 @@ model User {
   name     String
   role     Role   @default(USER)
 
-  isVerified      Boolean?  @default(false)
+  isVerified      Boolean?       @default(false)
   verificationOtp String?
   otpExpiresAt    DateTime?
-
-  profile     Profile?
-  travelPlans TravelPlan[]
+  notifications   Notification[]
+  profile         Profile?
+  travelPlans     TravelPlan[]
 
   reviewsGiven    Review[] @relation("reviewsGiven")
   reviewsReceived Review[] @relation("reviewsReceived")
@@ -271,4 +287,35 @@ model GroupMember {
   joinedAt DateTime @default(now())
 
   @@unique([groupId, userId])
+}
+
+model Notification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    NotificationType
+  title   String
+  message String           @db.Text
+
+  // Related entities
+  relatedEntityId   String? // ID of match, review, group, etc.
+  relatedEntityType String? // "match", "review", "group", etc.
+
+  // Metadata (JSON for flexible data)
+  metadata Json?
+
+  // Status
+  isRead Boolean   @default(false)
+  readAt DateTime?
+
+  // Actions
+  actionUrl String? // Link to take action
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([type])
+  @@index([createdAt])
 }

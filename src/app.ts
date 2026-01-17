@@ -1,7 +1,7 @@
 import express, { Application } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { envVars } from "./app/config/envVars";
+
 import router from "./app/router";
 // ⚠️ Adjust path if needed
 import { subscriptionController } from "./app/module/Subscription/subscription.controller";
@@ -25,9 +25,17 @@ app.post(
 app.use(express.json()); // Global JSON parser is now safe
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+const allowedOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
+
 app.use(
   cors({
-    origin: envVars.FRONT_END_URL || "*",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
